@@ -1,4 +1,4 @@
-It's wordle game with singleplayer and multiplayer.		
+It's wordle game with singleplayer and multiplayer.    
 **Only in Russian language**	
 Includes 4780 russian words.	
 
