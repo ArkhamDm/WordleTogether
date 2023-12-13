@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">Wordle</string>
+    <string name="your_word_was">Твое слово было:</string>
+    <string name="again_button">Еще раз</string>
+    <string name="single_win">Ты выйграл!</string>
+    <string name="single_lose">Проигрыш</string>
+    <string name="exit">Выход</string>
+    <string name="into_main_menu">В меню</string>
+    <string name="wait_opponent">Ожидаем соперника</string>
+    <string name="exit_gamemode">Вы собираетесь выйти из режима.</string>
+    <string name="sure_to_change">При этом сбросится весь прогресс в текущей игре, вы уверены?</string>
+    <string name="done">Готово</string>
+    <string name="guess_word">Отгадываемое слово</string>
+    <string name="enemy_code">Код противника</string>
+    <string name="your_code">Твой код</string>
+    <string name="enter_word">Введите слово:</string>
+</resources>

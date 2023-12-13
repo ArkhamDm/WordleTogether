@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "898536354083",
+    "project_id": "wordletogether-52080",
+    "storage_bucket": "wordletogether-52080.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:898536354083:android:6e1f8493b712b159a7dc96",
+        "android_client_info": {
+          "package_name": "com.example.scrambletogether"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDYEuEiA6_XNON37T9Qr2Ugs1ezNseeUjU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
