@@ -1,12 +1,12 @@
-It's wordle game with singleplayer and multiplayer.    
-**Only in Russian language yet**  
-Includes 4780 russian words.  
+# WordleTogether
+This game includes singleplayer and multiplayer Wordle game!  
 
-![alt text](https://github.com/ArkhamDm/WordleTogether/blob/master/pics/main_menu.jpg?raw=true)
+# Used Technologies
+All game write on Jetpack Compose.  
+For multiplayer used Firebase Cloud Firestore
 
-**Singleplayer**
-![alt text](https://github.com/ArkhamDm/WordleTogether/blob/master/pics/singleplayer.jpg?raw=true)
-![alt text](https://github.com/ArkhamDm/WordleTogether/blob/master/pics/singleplayer_win.jpg?raw=true)  
-
-**Multiplayer**
-![alt text](https://github.com/ArkhamDm/WordleTogether/blob/master/pics/multiplayer.jpg?raw=true)
+# Screenshots of Game
+![](https://github.com/ArkhamDm/WordleTogether/blob/master/pics/main_menu.jpg?raw=true)
+![](https://github.com/ArkhamDm/WordleTogether/blob/master/pics/singleplayer.jpg?raw=true)
+![](https://github.com/ArkhamDm/WordleTogether/blob/master/pics/singleplayer_win.jpg?raw=true)
+![](https://github.com/ArkhamDm/WordleTogether/blob/master/pics/multiplayer.jpg?raw=true)
