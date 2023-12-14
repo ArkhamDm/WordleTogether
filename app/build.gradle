@@ -67,9 +67,6 @@ dependencies {
     implementation 'com.google.firebase:firebase-database-ktx:20.3.0'
     implementation 'androidx.startup:startup-runtime:1.1.1'
 
-    implementation "androidx.room:room-runtime:2.6.1" // Зависимость Room
-    annotationProcessor "androidx.room:room-compiler:2.6.1" // Процессор аннотаций Room
-
     testImplementation 'junit:junit:4.13.2'
 
     
