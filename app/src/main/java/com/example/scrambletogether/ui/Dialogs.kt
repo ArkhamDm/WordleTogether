@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.example.scrambletogether.ui
 
 import androidx.compose.foundation.background
@@ -57,9 +55,10 @@ fun EndSingleGame(
     isWin: Boolean,
     correctWord: String,
     restartButton: () -> Unit = {},
-    exitButton: () -> Unit = {}
+    exitButton: () -> Unit = {},
+    isMultiplayer: Boolean = false
 ) {
-    Dialog(onDismissRequest = { /*TODO*/ }) {
+    Dialog(onDismissRequest = {}) {
         Card(modifier = modifier) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -68,9 +67,15 @@ fun EndSingleGame(
                     text =
                     if (isWin) stringResource(id = R.string.single_win)
                     else stringResource(id = R.string.single_lose),
-                    fontSize = 36.sp,
+                    fontSize = 36.sp
+                )
+                Text(
+                    text =
+                    if (isMultiplayer) stringResource(R.string.lose_alert_new_word)
+                    else "",
                     modifier = Modifier
-                        .padding(top = 6.dp, start = 40.dp, end = 40.dp, bottom = 64.dp)
+                        .padding(top = 6.dp, start = 40.dp, end = 40.dp, bottom = 58.dp),
+                    fontSize = 12.sp
                 )
 
                 Column(
@@ -92,12 +97,16 @@ fun EndSingleGame(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(horizontal = 32.dp)
                 ) {
-                    StandardButton(onClick = restartButton) {
-                        Text(
-                            text = stringResource(R.string.again_button)
-                        )
+                    if (!isMultiplayer) {
+                        StandardButton(onClick = restartButton) {
+                            Text(
+                                text = stringResource(R.string.again_button)
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
@@ -126,7 +135,7 @@ fun SetWordDialog(
     var dotsCount by remember { mutableIntStateOf(0) }
     val wordFromEnemy by lettersViewModel.wordFromEnemy.collectAsState()
 
-    Dialog(onDismissRequest = { /*TODO*/ }) {
+    Dialog(onDismissRequest = {}) {
         Card(
             modifier = modifier
         ) {
@@ -185,7 +194,8 @@ fun SetWordDialog(
 fun CreateOrJoinGame(
     modifier: Modifier = Modifier,
     navController: NavController,
-    lettersViewModel: LettersViewModel = viewModel()
+    lettersViewModel: LettersViewModel = viewModel(),
+    closeDialog: () -> Unit
 ) {
     if (lettersViewModel.firebaseId.isEmpty()) lettersViewModel.firebaseId = FirebaseUtils.create()
 
@@ -197,7 +207,7 @@ fun CreateOrJoinGame(
 
     val wordFromEnemy by lettersViewModel.wordFromEnemy.collectAsState()
 
-    Dialog(onDismissRequest = {}) {
+    Dialog(onDismissRequest = closeDialog) {
         if (!clickedNext) {
             Card(modifier = modifier) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -406,7 +416,7 @@ fun Dot() {
 @Composable
 fun WhatPreview1() {
     ScrambleTogetherTheme {
-        EndSingleGame(isWin = true, correctWord = "ПИЗДА")
+        EndSingleGame(isWin = false, correctWord = "ПИЗДА", isMultiplayer = false)
     }
 }
 @Preview

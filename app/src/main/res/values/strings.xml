@@ -1,17 +1,18 @@
 <resources>
     <string name="app_name">Wordle</string>
-    <string name="your_word_was">Твое слово было:</string>
-    <string name="again_button">Еще раз</string>
-    <string name="single_win">Ты выйграл!</string>
-    <string name="single_lose">Проигрыш</string>
-    <string name="exit">Выход</string>
-    <string name="into_main_menu">В меню</string>
-    <string name="wait_opponent">Ожидаем соперника</string>
-    <string name="exit_gamemode">Вы собираетесь выйти из режима.</string>
-    <string name="sure_to_change">При этом сбросится весь прогресс в текущей игре, вы уверены?</string>
-    <string name="done">Готово</string>
-    <string name="guess_word">Отгадываемое слово</string>
-    <string name="enemy_code">Код противника</string>
-    <string name="your_code">Твой код</string>
-    <string name="enter_word">Введите слово:</string>
+    <string name="your_word_was">Your word was:</string>
+    <string name="again_button">Again</string>
+    <string name="single_win">You win!</string>
+    <string name="single_lose">You lose</string>
+    <string name="exit">Exit</string>
+    <string name="into_main_menu">To menu</string>
+    <string name="wait_opponent">Waiting opponent</string>
+    <string name="exit_gamemode">You are going to exit mode.</string>
+    <string name="sure_to_change">All progress will erased, are you sure?</string>
+    <string name="done">Done</string>
+    <string name="guess_word">Guessing word</string>
+    <string name="enemy_code">Enemy code</string>
+    <string name="your_code">Your code</string>
+    <string name="enter_word">Enter word:</string>
+    <string name="lose_alert_new_word">(only winner choose new word)</string>
 </resources>

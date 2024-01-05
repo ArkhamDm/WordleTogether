@@ -195,7 +195,11 @@ fun MainMenu(
     var createGameDialog by remember { mutableStateOf(false) }
 
     if (createGameDialog) {
-        CreateOrJoinGame(navController = navController, lettersViewModel = lettersViewModel)
+        CreateOrJoinGame(
+            navController = navController,
+            lettersViewModel = lettersViewModel,
+            closeDialog = {createGameDialog = false}
+        )
     }
 
     Column(
