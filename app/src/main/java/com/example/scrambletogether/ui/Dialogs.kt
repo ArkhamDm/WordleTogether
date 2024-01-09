@@ -7,17 +7,21 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.AbsoluteRoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -32,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -42,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.scrambletogether.R
 import com.example.scrambletogether.data.words
 import com.example.scrambletogether.ui.theme.ScrambleTogetherTheme
@@ -55,8 +61,7 @@ fun EndSingleGame(
     isWin: Boolean,
     correctWord: String,
     restartButton: () -> Unit = {},
-    exitButton: () -> Unit = {},
-    isMultiplayer: Boolean = false
+    exitButton: () -> Unit = {}
 ) {
     Dialog(onDismissRequest = {}) {
         Card(modifier = modifier) {
@@ -67,17 +72,10 @@ fun EndSingleGame(
                     text =
                     if (isWin) stringResource(id = R.string.single_win)
                     else stringResource(id = R.string.single_lose),
-                    fontSize = 36.sp
-                )
-                Text(
-                    text =
-                    if (isMultiplayer) stringResource(R.string.lose_alert_new_word)
-                    else "",
+                    fontSize = 36.sp,
                     modifier = Modifier
-                        .padding(top = 6.dp, start = 40.dp, end = 40.dp, bottom = 58.dp),
-                    fontSize = 12.sp
+                        .padding(top = 6.dp, start = 40.dp, end = 40.dp, bottom = 64.dp)
                 )
-
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
@@ -101,17 +99,15 @@ fun EndSingleGame(
                     modifier = Modifier
                         .padding(horizontal = 32.dp)
                 ) {
-                    if (!isMultiplayer) {
-                        StandardButton(onClick = restartButton) {
-                            Text(
-                                text = stringResource(R.string.again_button)
-                            )
-                        }
+                    NoBorderButton(onClick = restartButton) {
+                        Text(
+                            text = stringResource(R.string.again_button)
+                        )
                     }
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    StandardButton(onClick = exitButton) {
+                    NoBorderButton(onClick = exitButton) {
                         Text(
                             text = stringResource(R.string.into_main_menu)
                         )
@@ -124,7 +120,6 @@ fun EndSingleGame(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SetWordDialog(
     modifier: Modifier = Modifier,
@@ -132,6 +127,7 @@ fun SetWordDialog(
     isWait: MutableState<Boolean>
 ) {
     var waitForEnemy by remember { mutableStateOf(false) }
+    var isErrorWord by remember { mutableStateOf(false) }
     var dotsCount by remember { mutableIntStateOf(0) }
     val wordFromEnemy by lettersViewModel.wordFromEnemy.collectAsState()
 
@@ -151,16 +147,20 @@ fun SetWordDialog(
                 TextField(
                     value = wordToEnemy,
                     onValueChange = {wordToEnemy = it.uppercase()},
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(16.dp),
+                    isError = isErrorWord
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                StandardButton(
+                NoBorderButton(
                     onClick = {
-                        lettersViewModel.waitWord()
-                        FirebaseUtils.setWord(wordToEnemy, lettersViewModel.enemyFirebaseId)
-                        waitForEnemy = true
+                        isErrorWord = wordToEnemy !in words
+                        if (!isErrorWord) {
+                            lettersViewModel.waitWord(true)
+                            FirebaseUtils.setWord(wordToEnemy, lettersViewModel.enemyFirebaseId!!)
+                            waitForEnemy = true
+                        }
                     }
                 ) {
                     Text(
@@ -170,6 +170,7 @@ fun SetWordDialog(
                 }
 
                 if (waitForEnemy) {
+                    Spacer(modifier = Modifier.height(32.dp))
 
                     LaunchedEffect(key1 = true) {
                         // delay for adding new dots
@@ -183,13 +184,15 @@ fun SetWordDialog(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                if (wordFromEnemy.length == 5) isWait.value = false
+                if (wordFromEnemy.length == 5) {
+                    isWait.value = false
+                    lettersViewModel.waitWord(false)
+                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateOrJoinGame(
     modifier: Modifier = Modifier,
@@ -197,7 +200,7 @@ fun CreateOrJoinGame(
     lettersViewModel: LettersViewModel = viewModel(),
     closeDialog: () -> Unit
 ) {
-    if (lettersViewModel.firebaseId.isEmpty()) lettersViewModel.firebaseId = FirebaseUtils.create()
+    if (lettersViewModel.firebaseId == null) lettersViewModel.firebaseId = FirebaseUtils.create()
 
     var enemyFirebaseId by remember { mutableStateOf("") }
     var wordToEnemy  by remember { mutableStateOf("") }
@@ -217,7 +220,7 @@ fun CreateOrJoinGame(
                     )
                     Card(modifier = Modifier.padding(6.dp)) {
                         Text(
-                            text = lettersViewModel.firebaseId,
+                            text = lettersViewModel.firebaseId!!,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -257,7 +260,7 @@ fun CreateOrJoinGame(
 
                     Spacer(modifier = Modifier.height(48.dp))
 
-                    StandardButton(
+                    NoBorderButton(
                         onClick = {
                             isErrorWord = wordToEnemy !in words
                             FirebaseUtils.isExistAndFree(firebaseId = enemyFirebaseId) { exists ->
@@ -265,7 +268,7 @@ fun CreateOrJoinGame(
                             }
 
                             if (!isErrorWord and !isErrorFirebase) {
-                                lettersViewModel.waitWord()
+                                lettersViewModel.waitWord(true)
                                 FirebaseUtils.setWord(wordToEnemy, enemyFirebaseId)
                                 lettersViewModel.enemyFirebaseId = enemyFirebaseId
                                 clickedNext = true
@@ -280,10 +283,11 @@ fun CreateOrJoinGame(
                 }
             }
         } else {
-            WaitForEnemyDialog(code = lettersViewModel.firebaseId)
+            WaitForEnemyDialog(code = lettersViewModel.firebaseId!!)
             if (wordFromEnemy.length == 5) {
+                lettersViewModel.waitWord(false)
                 navController.navigate("multiPlayer/${lettersViewModel.enemyFirebaseId}")
-                FirebaseUtils.setStatusInGame(true, lettersViewModel.firebaseId)
+                FirebaseUtils.setStatus(true, lettersViewModel.firebaseId!!)
             }
         }
     }
@@ -311,7 +315,7 @@ fun WaitForEnemyDialog(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = stringResource(R.string.wait_opponent),
+                text = stringResource(R.string.wait_enemy),
                 fontSize = 24.sp,
                 modifier = Modifier.padding(16.dp)
             )
@@ -361,14 +365,14 @@ fun ChangeGamemode(
                     horizontalArrangement = Arrangement.SpaceAround,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    StandardButton(onClick = navigate) {
+                    NoBorderButton(onClick = navigate) {
                         Text(
-                            text = "Да"
+                            text = stringResource(R.string.yes)
                         )
                     }
-                    StandardButton(onClick = closeDialog) {
+                    NoBorderButton(onClick = closeDialog) {
                         Text(
-                            text = "Отмена"
+                            text = stringResource(R.string.close)
                         )
                     }
                 }
@@ -380,15 +384,76 @@ fun ChangeGamemode(
 }
 
 @Composable
-fun StandardButton(
+fun CreateOrJoinGameDialog(
+    modifier: Modifier = Modifier,
+    navController: NavController,
+    /*lettersViewModel: LettersViewModel = viewModel(),*/
+    closeDialog: () -> Unit
+) {
+    Dialog(onDismissRequest = closeDialog) {
+        Card(modifier = modifier) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ElevatedButton(
+                    onClick = { /*TODO*/ },
+                    shape = AbsoluteRoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.createSession),
+                        fontSize = 28.sp,
+                        modifier = Modifier
+                            .padding(vertical = 20.dp)
+                    )
+                }
+                NoBorderButton(
+                    onClick = { /*TODO*/ },
+                    shape = AbsoluteRoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.findSession),
+                        fontSize = 26.sp,
+                        modifier = Modifier
+                            .padding(vertical = 20.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ListSessionsDialog(
+    modifier: Modifier = Modifier,
+    navController: NavController,
+    /*lettersViewModel: LettersViewModel = viewModel(),*/
+    closeDialog: () -> Unit
+) {
+    Dialog(onDismissRequest = closeDialog) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+
+        }
+    }
+}
+
+
+@Composable
+fun NoBorderButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    shape: Shape = ButtonDefaults.shape,
     content: @Composable (RowScope.() -> Unit)
 ) {
     Button(
         onClick = onClick,
         modifier = modifier,
         border = null,
+        shape = shape,
         content = content
     )
 }
@@ -412,11 +477,11 @@ fun Dot() {
     )
 }
 
-@Preview
+/*@Preview
 @Composable
 fun WhatPreview1() {
     ScrambleTogetherTheme {
-        EndSingleGame(isWin = false, correctWord = "ПИЗДА", isMultiplayer = false)
+        EndSingleGame(isWin = false, correctWord = "ПИЗДА")
     }
 }
 @Preview
@@ -432,10 +497,16 @@ fun WhatPreview3() {
     ScrambleTogetherTheme {
         ChangeGamemode()
     }
-}
+}*/
 
-/*@Preview
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun WhatPreview4() {
-    CreateOrJoinGame(navController = rememberNavController())
-}*/
+    ScrambleTogetherTheme {
+        CreateOrJoinGameDialog(
+            navController = rememberNavController(),
+            closeDialog = {},
+            modifier = Modifier.fillMaxHeight(0.35f)
+        )
+    }
+}

@@ -1,16 +1,19 @@
 package com.example.scrambletogether.ui.viewModels
 
-import android.content.ContentValues
+import android.content.ContentValues.TAG
 import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.scrambletogether.data.ColorLetter
 import com.example.scrambletogether.data.LetterDataClass
 import com.example.scrambletogether.data.LettersViewModelDataClass
 import com.example.scrambletogether.data.startKeyboard
 import com.example.scrambletogether.data.startWordleWords
 import com.example.scrambletogether.data.words
 import com.example.scrambletogether.utils.FirebaseUtils
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.getField
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,19 +25,20 @@ import kotlinx.coroutines.launch
 class LettersViewModel : ViewModel() {
     private val _wordleWords = MutableStateFlow(startWordleWords)
     private val _keyboardLetters = MutableStateFlow(startKeyboard)
-    private val _wordFromEnemy = MutableStateFlow(String())
+    private val _wordFromEnemy = MutableStateFlow("")
+
+    private lateinit var listener: ListenerRegistration
 
     var wordleWords: StateFlow<LettersViewModelDataClass> = _wordleWords.asStateFlow()
     var keyboardLetters: StateFlow<Array<Array<LetterDataClass>>> = _keyboardLetters.asStateFlow()
     var wordFromEnemy: StateFlow<String> = _wordFromEnemy.asStateFlow()
 
-    var firebaseId: String = ""
-    lateinit var currentWord: String
-    lateinit var enemyFirebaseId: String
-    //TODO lateinit or bylazy
+    var firebaseId: String? = null
+    var currentWord: String? = null
+    var enemyFirebaseId: String? = null
 
-    fun restartGame(firebase: String = "", isMultiplayer: Boolean = false) {
-        currentWord = words.subList(0, 819).random()
+    fun restartGame(firebase: String? = null, isMultiplayer: Boolean = false) {
+        currentWord = if (!isMultiplayer) words.subList(0, 819).random() else currentWord
         firebaseId = firebase 
 
         _wordleWords.update {
@@ -47,7 +51,7 @@ class LettersViewModel : ViewModel() {
             ""
         }
 
-        if (isMultiplayer) FirebaseUtils.update(startWordleWords.tryingWords, firebase)
+        if (isMultiplayer) FirebaseUtils.reset()
     }
 
     init {
@@ -76,7 +80,7 @@ class LettersViewModel : ViewModel() {
                     }
                 }
 
-                if (isMultiplayer) FirebaseUtils.update(newTryingWords, firebaseId)
+                if (isMultiplayer) FirebaseUtils.update(newTryingWords)
 
                 currentState.copy(
                     tryingWords = newTryingWords,
@@ -103,7 +107,7 @@ class LettersViewModel : ViewModel() {
                     newTryingWords[currentState.wordsInLine][4] = LetterDataClass()
                 }
 
-                if (isMultiplayer) FirebaseUtils.update(newTryingWords, firebaseId)
+                if (isMultiplayer) FirebaseUtils.update(newTryingWords)
 
                 currentState.copy(
                     tryingWords = newTryingWords,
@@ -131,29 +135,28 @@ class LettersViewModel : ViewModel() {
                         val answer = currentState.tryingWords[currentState.wordsInLine]
 
                         for (i in answer.indices) {
-                            when (answer[i].letter) {
-                                currentWord[i] -> {
-                                    answer[i] = LetterDataClass(answer[i].letter, Color.Green)
-                                    updateKeyboard(answer[i].letter, Color.Green)
+                            val color = when (answer[i].letter) {
+                                currentWord!![i] -> {
+                                    ColorLetter.Right.color
                                 }
-                                in currentWord -> {
-                                    answer[i] = LetterDataClass(answer[i].letter, Color.Yellow)
-                                    updateKeyboard(answer[i].letter, Color.Yellow)
+                                in currentWord!! -> {
+                                    ColorLetter.Almost.color
                                 }
                                 else -> {
-                                    answer[i] = LetterDataClass(answer[i].letter, Color.Gray)
-                                    updateKeyboard(answer[i].letter, Color.Gray)
+                                    ColorLetter.Miss.color
                                 }
                             }
+                            answer[i] = LetterDataClass(answer[i].letter, color)
+                            updateKeyboard(answer[i].letter, color)
                         }
 
                         val isDone =
-                            (answer.count { it.color == Color.Green } == 5) or
+                            (answer.count { it.color == ColorLetter.Right.color } == 5) or
                                     (currentState.wordsInLine.inc() == amountOfWords)
 
                         newTryingWords[currentState.wordsInLine] = answer
 
-                        if (isMultiplayer) FirebaseUtils.update(newTryingWords, firebaseId)
+                        if (isMultiplayer) FirebaseUtils.update(newTryingWords)
 
                         currentState.copy(
                             tryingWords = newTryingWords,
@@ -179,7 +182,9 @@ class LettersViewModel : ViewModel() {
 
                 //сhange from yellow to green
                 if (indexOfChar == -1) {
-                    indexOfChar = newKeyboardLetter[line].indexOf(LetterDataClass(letter = letter, color = Color.Yellow))
+                    indexOfChar = newKeyboardLetter[line].indexOf(
+                        LetterDataClass(letter = letter, color = ColorLetter.Almost.color)
+                    )
                 }
 
                 if (indexOfChar >= 0) {
@@ -192,28 +197,34 @@ class LettersViewModel : ViewModel() {
         }
     }
 
-    fun waitWord() {
-        Firebase.firestore.collectionGroup(firebaseId)
-            .addSnapshotListener { snapshot, e ->
+    fun waitWord(wait: Boolean) {
+        if (wait) {
+            val ref = Firebase.firestore.collectionGroup(firebaseId!!)
+            listener = ref.addSnapshotListener { snapshot, e ->
                 if (e != null) {
-                    Log.w(ContentValues.TAG, "Listen failed Word", e)
+                    Log.e(TAG, "Listen failed Word", e)
                     return@addSnapshotListener
                 }
                 if (snapshot == null) {
-                    Log.d(ContentValues.TAG, "No such document")
+                    Log.d(TAG, "No such document")
                 } else {
                     val data = snapshot.documents.find {
-                        firebaseId in it.reference.path
+                        firebaseId!! in it.reference.path
                     }
-                    val wordInBase = data?.data?.get("currentWord").toString()
-                    if (wordInBase.length == 5) {
+                    val wordInBase = data?.getField<String>("currentWord") ?: ""
+                    Log.d(TAG, "Word in firebase: $wordInBase")
+                    Log.d(TAG, "Word in localEnemy: ${wordFromEnemy.value}")
+                    if (wordInBase.length == 5 && wordInBase != currentWord) {
+                        Log.d(TAG, "Rewrite to: $wordInBase")
                         _wordFromEnemy.update {
                             wordInBase
                         }
                         currentWord = wordInBase
                     }
-                    return@addSnapshotListener
                 }
             }
+        } else {
+            listener.remove()
+        }
     }
 }

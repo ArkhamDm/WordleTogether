@@ -3,10 +3,10 @@
     <string name="your_word_was">Your word was:</string>
     <string name="again_button">Again</string>
     <string name="single_win">You win!</string>
-    <string name="single_lose">You lose</string>
+    <string name="single_lose">You lose :(</string>
     <string name="exit">Exit</string>
     <string name="into_main_menu">To menu</string>
-    <string name="wait_opponent">Waiting opponent</string>
+    <string name="wait_enemy">Waiting Enemy</string>
     <string name="exit_gamemode">You are going to exit mode.</string>
     <string name="sure_to_change">All progress will erased, are you sure?</string>
     <string name="done">Done</string>
@@ -14,5 +14,11 @@
     <string name="enemy_code">Enemy code</string>
     <string name="your_code">Your code</string>
     <string name="enter_word">Enter word:</string>
-    <string name="lose_alert_new_word">(only winner choose new word)</string>
+    <string name="you">You</string>
+    <string name="word">Word</string>
+    <string name="enemy">Enemy</string>
+    <string name="yes">Yes</string>
+    <string name="close">Close</string>
+    <string name="createSession">Create</string>
+    <string name="findSession">Find</string>
 </resources>

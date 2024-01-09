@@ -17,10 +17,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.scrambletogether.R
 import com.example.scrambletogether.data.LetterDataClass
 import com.example.scrambletogether.ui.viewModels.LettersEnemyViewModel
 import com.example.scrambletogether.ui.viewModels.LettersViewModel
@@ -44,17 +46,17 @@ fun MultiScreen(
         DoubleGrid(
             yourWords = viewModelStateYours.tryingWords,
             enemyWords = viewModelStateEnemy,
-            enemyCurrentWord = viewModelStateEnemyCurrentState[0].toString()
+            enemyCurrentWord = viewModelStateEnemyCurrentState.currentWord
         )
     }
 
-    if (viewModelStateYours.isDone or viewModelStateEnemyCurrentState[1] as Boolean) {
+    if (viewModelStateYours.isDone or viewModelStateEnemyCurrentState.isWin) {
         EndSingleGame(
             isWin = viewModelStateYours.tryingWords[viewModelStateYours.wordsInLine]
                 .count { it.color == Color.Green } == 5,
-            correctWord = lettersViewModel_yours.currentWord,
+            correctWord = lettersViewModel_yours.currentWord!!,
             restartButton = {
-                lettersViewModel_yours.restartGame(lettersViewModel_yours.firebaseId, isMultiplayer = true)
+                lettersViewModel_yours.restartGame(lettersViewModel_yours.firebaseId!!, isMultiplayer = true)
                 lettersViewModel_enemy.restartGame()
                 isWait.value = true
             },
@@ -85,7 +87,7 @@ fun DoubleGrid(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Ты",
+                text = stringResource(R.string.you),
                 fontSize = 24.sp,
                 modifier = Modifier.padding(bottom = 6.dp)
             )
@@ -93,7 +95,7 @@ fun DoubleGrid(
                 tryingWords = yourWords, fontSize = 24.sp, padding = 1.dp
             )
             Text(
-                text = "Слово: ?????",
+                text = stringResource(R.string.word) + ": ?????",
                 fontSize = 18.sp,
                 modifier = Modifier.padding(top = 12.dp)
             )
@@ -111,7 +113,7 @@ fun DoubleGrid(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Противник",
+                text = stringResource(R.string.enemy),
                 fontSize = 24.sp,
                 modifier = Modifier.padding(bottom = 6.dp)
             )
@@ -119,7 +121,7 @@ fun DoubleGrid(
                 tryingWords = enemyWords, fontSize = 24.sp, padding = 1.dp
             )
             Text(
-                text = "Слово: $enemyCurrentWord",
+                text = "${stringResource(R.string.word)}: $enemyCurrentWord",
                 fontSize = 18.sp,
                 modifier = Modifier.padding(top = 12.dp)
             )

@@ -114,7 +114,7 @@ fun SinglePlayer(
         EndSingleGame(
             isWin =
             viewModelState.tryingWords[viewModelState.wordsInLine].count { it.color == Color.Green } == 5,
-            correctWord = lettersViewModel.currentWord,
+            correctWord = lettersViewModel.currentWord!!,
             restartButton = { lettersViewModel.restartGame() },
             exitButton = { navController.navigate("mainMenu") }
         )
@@ -152,7 +152,7 @@ fun MultiPlayer(
     lettersViewModel: LettersViewModel = viewModel()
 ) {
     var backPressed by remember { mutableStateOf(false) }
-    Log.w(TAG, "recompose MultiPlayer")
+    Log.d(TAG, "recompose MultiPlayer")
 
     Column(
         modifier = modifier,
@@ -176,8 +176,9 @@ fun MultiPlayer(
             navigate = {
                 navController.navigate("mainMenu")
                 backPressed = false
-                lettersViewModel.restartGame(lettersViewModel.firebaseId)
-                FirebaseUtils.setStatusInGame(false, lettersViewModel.firebaseId)
+                lettersViewModel.restartGame(lettersViewModel.firebaseId!!, isMultiplayer = true)
+                lettersEnemyViewModel.restartGame()
+                FirebaseUtils.setStatus(false, lettersViewModel.firebaseId!!)
             },
             closeDialog = {
                 backPressed = false
