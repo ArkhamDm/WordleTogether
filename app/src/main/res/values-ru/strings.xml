@@ -21,4 +21,9 @@
     <string name="close">Закрыть</string>
     <string name="createSession">Создать</string>
     <string name="findSession">Найти</string>
+    <string name="refresh">Обновить</string>
+    <string name="enter_session_name">Введите название:</string>
+    <string name="waiting_enemy">Ожидание противника</string>
+    <string name="enemy_choosing_word">Противник выбирает слово</string>
+    <string name="server_name">"Сервер: "</string>
 </resources>

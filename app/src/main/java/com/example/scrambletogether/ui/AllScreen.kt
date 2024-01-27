@@ -55,11 +55,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.scrambletogether.R
+import com.example.scrambletogether.data.RouteName
+import com.example.scrambletogether.firestore.ui.FirestoreViewModel
 import com.example.scrambletogether.ui.theme.ScrambleTogetherTheme
 import com.example.scrambletogether.ui.theme.md_theme_dark_onTertiary
-import com.example.scrambletogether.ui.viewModels.LettersEnemyViewModel
 import com.example.scrambletogether.ui.viewModels.LettersViewModel
-import com.example.scrambletogether.utils.FirebaseUtils
 import kotlin.system.exitProcess
 
 @Composable
@@ -116,7 +116,7 @@ fun SinglePlayer(
             viewModelState.tryingWords[viewModelState.wordsInLine].count { it.color == Color.Green } == 5,
             correctWord = lettersViewModel.currentWord!!,
             restartButton = { lettersViewModel.restartGame() },
-            exitButton = { navController.navigate("mainMenu") }
+            exitButton = { navController.navigate(RouteName.MAIN_MENU.string) }
         )
     }
 
@@ -127,7 +127,7 @@ fun SinglePlayer(
     if (backPressed) {
         ChangeGamemode(
             navigate = {
-                navController.navigate("mainMenu")
+                navController.navigate(RouteName.MAIN_MENU.string)
                 backPressed = false
                 lettersViewModel.restartGame()
             },
@@ -141,17 +141,21 @@ fun SinglePlayer(
 @Composable
 fun MultiPlayer(
     modifier: Modifier = Modifier,
-    enemyFirebase: String,
     navController: NavController,
-    lettersEnemyViewModel: LettersEnemyViewModel = viewModel(
-        factory =
-        LettersEnemyViewModel.Companion.LettersEnemyViewModelFactory(
-            enemyFirebase
-        )
-    ),
-    lettersViewModel: LettersViewModel = viewModel()
+    firestoreViewModel: FirestoreViewModel,
+    lettersViewModel: LettersViewModel
 ) {
     var backPressed by remember { mutableStateOf(false) }
+    var setWordDialog by remember { mutableStateOf(true) }
+    var isWin: Boolean? by remember { mutableStateOf(null) }
+
+    if (setWordDialog) {
+        SetWordDialog(firestoreViewModel = firestoreViewModel) {
+            setWordDialog = !setWordDialog
+        }
+        lettersViewModel.firebaseId = firestoreViewModel.infForViewmodel.sessionId
+    }
+
     Log.d(TAG, "recompose MultiPlayer")
 
     Column(
@@ -160,11 +164,48 @@ fun MultiPlayer(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         MultiScreen(
-            lettersViewModel_enemy = lettersEnemyViewModel,
-            lettersViewModel_yours = lettersViewModel,
-            exitButton = { navController.navigate("mainMenu") }
+            firestoreViewModel = firestoreViewModel,
+            lettersViewModel = lettersViewModel,
+            endGame = {
+                isWin = it
+            }
         )
-        KeyboardGrid(isMultiplayer = true, lettersViewModel = lettersViewModel)
+        KeyboardGrid(lettersViewModel = lettersViewModel, isHost = firestoreViewModel.infForViewmodel.isHost)
+    }
+
+    if (isWin != null) {
+        Log.d(TAG, "here")
+        lettersViewModel.isDoneSwitch()
+        firestoreViewModel.isDoneSwitch()
+        EndSingleGame(
+            isWin = isWin!!,
+            correctWord = lettersViewModel.currentWord!!,
+            restartButton = {
+                lettersViewModel.restartGame(lettersViewModel.firebaseId)
+                firestoreViewModel.reset()
+
+                if (isWin!!) {
+                    firestoreViewModel.incWinCount()
+                } else {
+                    firestoreViewModel.incLoseCount()
+                }
+
+                isWin = null
+                setWordDialog = !setWordDialog
+            },
+            exitButton = {
+                navController.navigate(RouteName.MAIN_MENU.string)
+                lettersViewModel.restartGame(lettersViewModel.firebaseId)
+                firestoreViewModel.reset()
+                firestoreViewModel.disconnectFromSession()
+
+                if (isWin!!) {
+                    firestoreViewModel.incWinCount()
+                } else {
+                    firestoreViewModel.incLoseCount()
+                }
+            }
+        )
     }
 
     BackHandler {
@@ -174,11 +215,11 @@ fun MultiPlayer(
     if (backPressed) {
         ChangeGamemode(
             navigate = {
-                navController.navigate("mainMenu")
+                navController.navigate(RouteName.MAIN_MENU.string)
                 backPressed = false
-                lettersViewModel.restartGame(lettersViewModel.firebaseId!!, isMultiplayer = true)
-                lettersEnemyViewModel.restartGame()
-                FirebaseUtils.setStatus(false, lettersViewModel.firebaseId!!)
+                lettersViewModel.restartGame(lettersViewModel.firebaseId)
+                firestoreViewModel.reset()
+                firestoreViewModel.disconnectFromSession()
             },
             closeDialog = {
                 backPressed = false
@@ -191,16 +232,14 @@ fun MultiPlayer(
 fun MainMenu(
     modifier: Modifier = Modifier,
     navController: NavController,
-    lettersViewModel: LettersViewModel = viewModel()
+    firestoreViewModel: FirestoreViewModel
 ) {
     var createGameDialog by remember { mutableStateOf(false) }
 
     if (createGameDialog) {
-        CreateOrJoinGame(
-            navController = navController,
-            lettersViewModel = lettersViewModel,
-            closeDialog = {createGameDialog = false}
-        )
+        MultiplayerDialog(navController = navController, firestoreViewModel = firestoreViewModel) {
+            createGameDialog = !createGameDialog
+        }
     }
 
     Column(
@@ -235,7 +274,7 @@ fun MainMenu(
 
         Row {
             ChooseGameModeButton(
-                onClick = { navController.navigate("singlePlayer") },
+                onClick = { navController.navigate(RouteName.SINGLE_PLAYER.string) },
                 icon = R.drawable.person,
                 contentDescription = "singlePlayer"
             )
@@ -281,7 +320,7 @@ fun MainMenuPreview() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            MainMenu(navController = rememberNavController())
+            MainMenu(navController = rememberNavController(), firestoreViewModel = viewModel())
         }
     }
 }

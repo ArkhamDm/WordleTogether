@@ -1,26 +1,30 @@
 package com.example.scrambletogether.data
 
-lateinit var words: List<String>
+var words: List<String> = emptyList()
 
 val startWordleWords: LettersViewModelDataClass =
     LettersViewModelDataClass(
         tryingWords = Array(6) {
-            Array(5) { LetterDataClass() }
+            Array(5) { Letter() }
         }
     )
 
-val startKeyboard: Array<Array<LetterDataClass>> =
+val enemyGrid = Array(6) {
+    Array(5) { Letter() }
+}
+
+val startKeyboard: Array<Array<Letter>> =
     arrayOf(
         Array("ЙЦУКЕНГШЩЗХЪ".length) {
             val rus = "ЙЦУКЕНГШЩЗХЪ"
-            LetterDataClass(letter = rus[it])
+            Letter(letter = rus[it])
         },
         Array("ФЫВАПРОЛДЖЭ".length) {
             val rus = "ФЫВАПРОЛДЖЭ"
-            LetterDataClass(letter = rus[it])
+            Letter(letter = rus[it])
         },
         Array("ЯЧСМИТЬБЮ".length) {
             val rus = "ЯЧСМИТЬБЮ"
-            LetterDataClass(letter = rus[it])
+            Letter(letter = rus[it])
         }
     )

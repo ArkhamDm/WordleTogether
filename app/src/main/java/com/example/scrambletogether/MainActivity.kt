@@ -11,7 +11,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.scrambletogether.data.RouteName
+import com.example.scrambletogether.data.UserRepository
 import com.example.scrambletogether.data.words
+import com.example.scrambletogether.firestore.ui.FirestoreViewModel
 import com.example.scrambletogether.ui.MainMenu
 import com.example.scrambletogether.ui.MultiPlayer
 import com.example.scrambletogether.ui.SinglePlayer
@@ -19,6 +22,8 @@ import com.example.scrambletogether.ui.theme.ScrambleTogetherTheme
 import com.example.scrambletogether.ui.viewModels.LettersViewModel
 
 class MainActivity : ComponentActivity() {
+    private val userPreferences by lazy { UserRepository(this) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -37,15 +42,28 @@ class MainActivity : ComponentActivity() {
                     val navController = rememberNavController()
 
                     val lettersViewModel: LettersViewModel = viewModel()
+                    val firestoreViewModel: FirestoreViewModel = viewModel(
+                        factory = FirestoreViewModel.Companion.SettingsViewModelFactory(userPreferences)
+                    )
 
-                    NavHost(navController = navController, startDestination = "mainMenu") {
-                        composable("mainMenu") { MainMenu(navController = navController, lettersViewModel = lettersViewModel) }
-                        composable("singlePlayer") { SinglePlayer(navController = navController, lettersViewModel = lettersViewModel) }
-                        composable("multiPlayer/{enemyFirebaseId}") {
-                            MultiPlayer(
-                                enemyFirebase = it.arguments?.getString("enemyFirebaseId") ?: "undefined",
+                    NavHost(navController = navController, startDestination = RouteName.MAIN_MENU.string) {
+                        composable(RouteName.MAIN_MENU.string) {
+                            MainMenu(
+                                navController = navController,
+                                firestoreViewModel = firestoreViewModel
+                            )
+                        }
+                        composable(RouteName.SINGLE_PLAYER.string) {
+                            SinglePlayer(
                                 navController = navController,
                                 lettersViewModel = lettersViewModel
+                            )
+                        }
+                        composable(RouteName.MULTI_PLAYER.string) {
+                            MultiPlayer(
+                                navController = navController,
+                                lettersViewModel = lettersViewModel,
+                                firestoreViewModel = firestoreViewModel
                             )
                         }
 
@@ -53,5 +71,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
     }
 }

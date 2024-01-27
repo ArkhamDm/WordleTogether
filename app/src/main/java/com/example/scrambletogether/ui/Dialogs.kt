@@ -1,35 +1,42 @@
 package com.example.scrambletogether.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.AbsoluteRoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.Divider
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,7 +46,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -49,11 +55,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.scrambletogether.R
+import com.example.scrambletogether.data.RouteName
+import com.example.scrambletogether.data.startWordleWords
 import com.example.scrambletogether.data.words
+import com.example.scrambletogether.firestore.data.SessionItem
+import com.example.scrambletogether.firestore.ui.FirestoreViewModel
 import com.example.scrambletogether.ui.theme.ScrambleTogetherTheme
-import com.example.scrambletogether.ui.viewModels.LettersViewModel
-import com.example.scrambletogether.utils.FirebaseUtils
-import kotlinx.coroutines.delay
 
 @Composable
 fun EndSingleGame(
@@ -121,222 +128,6 @@ fun EndSingleGame(
 }
 
 @Composable
-fun SetWordDialog(
-    modifier: Modifier = Modifier,
-    lettersViewModel: LettersViewModel = viewModel(),
-    isWait: MutableState<Boolean>
-) {
-    var waitForEnemy by remember { mutableStateOf(false) }
-    var isErrorWord by remember { mutableStateOf(false) }
-    var dotsCount by remember { mutableIntStateOf(0) }
-    val wordFromEnemy by lettersViewModel.wordFromEnemy.collectAsState()
-
-    Dialog(onDismissRequest = {}) {
-        Card(
-            modifier = modifier
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                var wordToEnemy  by remember { mutableStateOf("") }
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = stringResource(R.string.enter_word)
-                )
-                TextField(
-                    value = wordToEnemy,
-                    onValueChange = {wordToEnemy = it.uppercase()},
-                    modifier = Modifier.padding(16.dp),
-                    isError = isErrorWord
-                )
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                NoBorderButton(
-                    onClick = {
-                        isErrorWord = wordToEnemy !in words
-                        if (!isErrorWord) {
-                            lettersViewModel.waitWord(true)
-                            FirebaseUtils.setWord(wordToEnemy, lettersViewModel.enemyFirebaseId!!)
-                            waitForEnemy = true
-                        }
-                    }
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.done),
-                        fontSize = 16.sp
-                    )
-                }
-
-                if (waitForEnemy) {
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    LaunchedEffect(key1 = true) {
-                        // delay for adding new dots
-                        while (true) {
-                            delay(500)
-                            dotsCount = dotsCount % 5 + 1
-                        }
-                    }
-                    LoadingIndicator(dotsCount = dotsCount)
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
-
-                if (wordFromEnemy.length == 5) {
-                    isWait.value = false
-                    lettersViewModel.waitWord(false)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CreateOrJoinGame(
-    modifier: Modifier = Modifier,
-    navController: NavController,
-    lettersViewModel: LettersViewModel = viewModel(),
-    closeDialog: () -> Unit
-) {
-    if (lettersViewModel.firebaseId == null) lettersViewModel.firebaseId = FirebaseUtils.create()
-
-    var enemyFirebaseId by remember { mutableStateOf("") }
-    var wordToEnemy  by remember { mutableStateOf("") }
-    var isErrorFirebase by remember { mutableStateOf(true) }
-    var isErrorWord by remember { mutableStateOf(false) }
-    var clickedNext by remember { mutableStateOf(false) }
-
-    val wordFromEnemy by lettersViewModel.wordFromEnemy.collectAsState()
-
-    Dialog(onDismissRequest = closeDialog) {
-        if (!clickedNext) {
-            Card(modifier = modifier) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = stringResource(R.string.your_code),
-                        modifier = Modifier.padding(12.dp)
-                    )
-                    Card(modifier = Modifier.padding(6.dp)) {
-                        Text(
-                            text = lettersViewModel.firebaseId!!,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Divider(thickness = 5.dp)
-
-                    Text(
-                        text = stringResource(R.string.enemy_code),
-                        modifier = Modifier.padding(12.dp)
-                    )
-                    Card {
-                        TextField(
-                            value = enemyFirebaseId,
-                            onValueChange = { enemyFirebaseId = it.uppercase() },
-                            isError = isErrorFirebase,
-                            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Next)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(48.dp))
-                    Divider(thickness = 5.dp)
-
-                    Text(
-                        text = stringResource(R.string.guess_word),
-                        modifier = Modifier.padding(12.dp)
-                    )
-                    Card {
-                        TextField(
-                            value = wordToEnemy,
-                            onValueChange = {
-                                wordToEnemy = it.uppercase()
-                            },
-                            isError = isErrorWord,
-                            keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(48.dp))
-
-                    NoBorderButton(
-                        onClick = {
-                            isErrorWord = wordToEnemy !in words
-                            FirebaseUtils.isExistAndFree(firebaseId = enemyFirebaseId) { exists ->
-                                isErrorFirebase = !exists
-                            }
-
-                            if (!isErrorWord and !isErrorFirebase) {
-                                lettersViewModel.waitWord(true)
-                                FirebaseUtils.setWord(wordToEnemy, enemyFirebaseId)
-                                lettersViewModel.enemyFirebaseId = enemyFirebaseId
-                                clickedNext = true
-                            }
-                        },
-                        modifier = Modifier.padding(6.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.done)
-                        )
-                    }
-                }
-            }
-        } else {
-            WaitForEnemyDialog(code = lettersViewModel.firebaseId!!)
-            if (wordFromEnemy.length == 5) {
-                lettersViewModel.waitWord(false)
-                navController.navigate("multiPlayer/${lettersViewModel.enemyFirebaseId}")
-                FirebaseUtils.setStatus(true, lettersViewModel.firebaseId!!)
-            }
-        }
-    }
-}
-
-@Composable
-fun WaitForEnemyDialog(
-    modifier: Modifier = Modifier,
-    code: String = "7gdvDv"
-) {
-    var dotsCount by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(key1 = true) {
-        // delay for adding new dots
-        while (true) {
-            delay(500)
-            dotsCount = dotsCount % 5 + 1
-        }
-    }
-
-    Card(modifier = modifier) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = stringResource(R.string.wait_enemy),
-                fontSize = 24.sp,
-                modifier = Modifier.padding(16.dp)
-            )
-
-            Text(
-                text = code,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 16.dp),
-                fontSize = 28.sp
-            )
-
-            Spacer(modifier = Modifier.height(64.dp))
-
-            LoadingIndicator(dotsCount)
-
-            Spacer(modifier = Modifier.height(32.dp))
-        }
-    }
-}
-
-@Composable
 fun ChangeGamemode(
     modifier: Modifier = Modifier,
     closeDialog: () -> Unit = {},
@@ -384,40 +175,52 @@ fun ChangeGamemode(
 }
 
 @Composable
-fun CreateOrJoinGameDialog(
+fun SetWordDialog(
     modifier: Modifier = Modifier,
-    navController: NavController,
-    /*lettersViewModel: LettersViewModel = viewModel(),*/
-    closeDialog: () -> Unit
+    firestoreViewModel: FirestoreViewModel,
+    onClick: () -> Unit
 ) {
-    Dialog(onDismissRequest = closeDialog) {
+    var isErrorWord by remember { mutableStateOf(true) }
+    var wordToEnemy  by remember { mutableStateOf("") }
+
+    if (wordToEnemy.length == startWordleWords.tryingWords[0].size) {
+        isErrorWord = wordToEnemy !in words
+    }
+
+    Dialog(onDismissRequest = {}) {
         Card(modifier = modifier) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = modifier,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                ElevatedButton(
-                    onClick = { /*TODO*/ },
-                    shape = AbsoluteRoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.createSession),
-                        fontSize = 28.sp,
-                        modifier = Modifier
-                            .padding(vertical = 20.dp)
-                    )
-                }
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = stringResource(R.string.enter_word)
+                )
+                TextField(
+                    value = wordToEnemy,
+                    onValueChange = {wordToEnemy = it.uppercase()},
+                    modifier = Modifier.padding(16.dp),
+                    isError = isErrorWord
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
                 NoBorderButton(
-                    onClick = { /*TODO*/ },
-                    shape = AbsoluteRoundedCornerShape(6.dp)
+                    onClick =
+                    if (!isErrorWord) {
+                        {
+                            onClick()
+                            firestoreViewModel.updateWord(wordToEnemy)
+                        }
+                    } else {
+                        {}
+                    }
                 ) {
                     Text(
-                        text = stringResource(R.string.findSession),
-                        fontSize = 26.sp,
-                        modifier = Modifier
-                            .padding(vertical = 20.dp)
+                        text = stringResource(id = R.string.done),
+                        fontSize = 16.sp
                     )
                 }
             }
@@ -426,21 +229,251 @@ fun CreateOrJoinGameDialog(
 }
 
 @Composable
-fun ListSessionsDialog(
+fun MultiplayerDialog(
     modifier: Modifier = Modifier,
     navController: NavController,
-    /*lettersViewModel: LettersViewModel = viewModel(),*/
+    firestoreViewModel: FirestoreViewModel,
     closeDialog: () -> Unit
 ) {
-    Dialog(onDismissRequest = closeDialog) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+    var findClicked by remember { mutableStateOf(false) }
+    var createClicked by remember { mutableStateOf(false) }
+    var connectClicked by remember { mutableStateOf(false) }
 
+    Dialog(onDismissRequest = closeDialog) {
+        Card(modifier = modifier) {
+            if (findClicked) {
+                ListSessions(
+                    firestoreViewModel = firestoreViewModel,
+                    connectClick = {
+                        connectClicked = !connectClicked
+                        findClicked = !findClicked
+                    },
+                    backClick = {
+                        findClicked = !findClicked
+                    }
+                )
+            } else if (createClicked ) {
+                SetSessionFieldButton(firestoreViewModel = firestoreViewModel) {
+                    navController.navigate(RouteName.MULTI_PLAYER.string)
+                    createClicked = !createClicked
+                }
+            } else if (connectClicked) {
+                navController.navigate(RouteName.MULTI_PLAYER.string)
+            } else {
+                CreateOrFindButtons(
+                    createClick = {
+                        createClicked = !createClicked
+                    },
+                    findClick = {
+                        findClicked = !findClicked
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 64.dp, horizontal = 12.dp)
+                )
+            }
         }
     }
 }
 
+@Composable
+fun CreateOrFindButtons(
+    modifier: Modifier = Modifier,
+    createClick: () -> Unit,
+    findClick: () -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+    ) {
+        ElevatedButton(
+            onClick = createClick,
+            shape = AbsoluteRoundedCornerShape(6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.createSession),
+                fontSize = 28.sp,
+                modifier = Modifier
+                    .padding(vertical = 20.dp)
+            )
+        }
+        NoBorderButton(
+            onClick = findClick,
+            shape = AbsoluteRoundedCornerShape(6.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.findSession),
+                fontSize = 26.sp,
+                modifier = Modifier
+                    .padding(vertical = 20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun ListSessions(
+    modifier: Modifier = Modifier,
+    firestoreViewModel: FirestoreViewModel,
+    backClick: () -> Unit,
+    connectClick: () -> Unit,
+) {
+    val sessions by firestoreViewModel.sessionsList.collectAsState()
+    firestoreViewModel.getSessions()
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        IconButton(
+            onClick = backClick,
+            modifier = Modifier
+                .align(Alignment.Start)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = null,
+            )
+        }
+        Card(
+            modifier = Modifier
+
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxHeight(0.5f)
+                    .fillMaxWidth()
+                    .border(1.dp, Color.Black.copy(alpha = 0.2f), shape = ShapeDefaults.ExtraSmall),
+                contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                if (sessions.isLoading) {
+                    item {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    items(sessions.sessions) { session ->
+                        Session(
+                            session = session,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp)
+                                .border(1.dp, color = Color.Black, shape = ShapeDefaults.Medium)
+                                .height(40.dp)
+                                .clickable {
+                                    firestoreViewModel.connectToSession(session.id)
+                                    connectClick()
+                                }
+                        )
+                    }
+                }
+            }
+        }
+
+        Button(
+            onClick = {
+                firestoreViewModel.getSessions()
+            },
+            modifier = Modifier
+                .padding(bottom = 16.dp, top = 16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(imageVector = Icons.Default.Refresh, contentDescription = "refresh session")
+                Text(text = stringResource(R.string.refresh))
+            }
+        }
+    }
+}
+
+@Composable
+fun Session(
+    modifier: Modifier = Modifier,
+    session: SessionItem
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 6.dp)
+        ) {
+            Icon(imageVector = Icons.Default.Person, contentDescription = null)
+            Text(
+                text = session.id
+            )
+        }
+        Text(
+            text = session.gamemode,
+            color = Color.White
+        )
+        Row(
+            modifier = Modifier.padding(end = 12.dp)
+        ) {
+            Text(
+                text = session.winTotal.toString(),
+                color = Color.Green
+            )
+            Text(text = "/")
+            Text(
+                text = session.loseTotal.toString(),
+                color = Color.Red
+            )
+        }
+    }
+}
+
+
+@Composable
+fun SetSessionFieldButton(
+    modifier: Modifier = Modifier,
+    firestoreViewModel: FirestoreViewModel,
+    onClick: () -> Unit
+) {
+    var sessionId  by remember { mutableStateOf("") }
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = stringResource(R.string.enter_session_name)
+        )
+        TextField(
+            value = sessionId,
+            onValueChange = {sessionId = it},
+            modifier = Modifier.padding(16.dp),
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        NoBorderButton(
+            onClick = {
+                firestoreViewModel.create(
+                    SessionItem(
+                        id = sessionId,
+                        winTotal = firestoreViewModel.dataCounts.value.winCount,
+                        loseTotal = firestoreViewModel.dataCounts.value.loseCount,
+                        gamemode = "TwoSideMode"
+                    )
+                )
+                onClick()
+            }
+        ) {
+            Text(
+                text = stringResource(id = R.string.done),
+                fontSize = 16.sp
+            )
+        }
+    }
+}
 
 @Composable
 fun NoBorderButton(
@@ -503,10 +536,10 @@ fun WhatPreview3() {
 @Composable
 fun WhatPreview4() {
     ScrambleTogetherTheme {
-        CreateOrJoinGameDialog(
+        MultiplayerDialog(
             navController = rememberNavController(),
             closeDialog = {},
-            modifier = Modifier.fillMaxHeight(0.35f)
+            firestoreViewModel = viewModel()
         )
     }
 }

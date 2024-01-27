@@ -23,12 +23,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.scrambletogether.data.LetterDataClass
+import com.example.scrambletogether.data.Letter
 import com.example.scrambletogether.ui.theme.ScrambleTogetherTheme
 
 @Composable
 fun ListWords(
-    tryingWords: Array<Array<LetterDataClass>>,
+    tryingWords: Array<Array<Letter>>,
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 54.sp,
     padding: Dp = 3.dp
@@ -44,7 +44,7 @@ fun ListWords(
 
 @Composable
 fun Word(
-    word: Array<LetterDataClass>,
+    word: Array<Letter>,
     fontSize: TextUnit,
     modifier: Modifier = Modifier,
     padding: Dp
@@ -100,7 +100,7 @@ fun Preview() {
         ListWords(
             Array(6) {
                      Array(5) {
-                         LetterDataClass()
+                         Letter()
                      }
             },
             fontSize = 54.sp

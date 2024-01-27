@@ -6,16 +6,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.scrambletogether.data.ColorLetter
-import com.example.scrambletogether.data.LetterDataClass
+import com.example.scrambletogether.data.Letter
 import com.example.scrambletogether.data.LettersViewModelDataClass
 import com.example.scrambletogether.data.startKeyboard
 import com.example.scrambletogether.data.startWordleWords
 import com.example.scrambletogether.data.words
-import com.example.scrambletogether.utils.FirebaseUtils
-import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.getField
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.example.scrambletogether.firestore.repository.FirestoreRepository
+import com.example.scrambletogether.firestore.repository.FirestoreRepositoryImpl
+import com.example.scrambletogether.utils.ResultState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,21 +23,18 @@ import kotlinx.coroutines.launch
 class LettersViewModel : ViewModel() {
     private val _wordleWords = MutableStateFlow(startWordleWords)
     private val _keyboardLetters = MutableStateFlow(startKeyboard)
-    private val _wordFromEnemy = MutableStateFlow("")
-
-    private lateinit var listener: ListenerRegistration
 
     var wordleWords: StateFlow<LettersViewModelDataClass> = _wordleWords.asStateFlow()
-    var keyboardLetters: StateFlow<Array<Array<LetterDataClass>>> = _keyboardLetters.asStateFlow()
-    var wordFromEnemy: StateFlow<String> = _wordFromEnemy.asStateFlow()
+    var keyboardLetters: StateFlow<Array<Array<Letter>>> = _keyboardLetters.asStateFlow()
 
-    var firebaseId: String? = null
+    private val repo: FirestoreRepository = FirestoreRepositoryImpl()
+
+    lateinit var firebaseId: String
     var currentWord: String? = null
-    var enemyFirebaseId: String? = null
 
-    fun restartGame(firebase: String? = null, isMultiplayer: Boolean = false) {
-        currentWord = if (!isMultiplayer) words.subList(0, 819).random() else currentWord
-        firebaseId = firebase 
+    fun restartGame(id: String? = null) = viewModelScope.launch {
+        currentWord = words.subList(0, 819).random()
+        if (id != null) firebaseId = id
 
         _wordleWords.update {
             startWordleWords
@@ -47,148 +42,191 @@ class LettersViewModel : ViewModel() {
         _keyboardLetters.update {
             startKeyboard
         }
-        _wordFromEnemy.update {
-            ""
-        }
 
-        if (isMultiplayer) FirebaseUtils.reset()
     }
+
 
     init {
         restartGame()
     }
 
-    fun addLetter(letter: Char, isMultiplayer: Boolean = false) {
-        viewModelScope.launch {
-            _wordleWords.update { currentState ->
-                val newTryingWords = currentState.tryingWords.map { it.copyOf() }.toTypedArray()
-                var madeFullWordInLine = false
+    fun addLetter(letter: Char, isHost: Boolean? = null) = viewModelScope.launch {
+        _wordleWords.update { currentState ->
+            val newTryingWords = currentState.tryingWords.map { it.copyOf() }.toTypedArray()
+            var madeFullWordInLine = false
 
-                val amountOfWords = currentState.tryingWords.size
+            val amountOfWords = currentState.tryingWords.size
 
-                if (!currentState.madeWordInLine && currentState.wordsInLine < amountOfWords) {
+            if (!currentState.madeWordInLine && currentState.wordsInLine < amountOfWords) {
 
-                    val indexOfSpace = newTryingWords[currentState.wordsInLine].indexOf(
-                        LetterDataClass()
-                    )
-                    if (indexOfSpace >= 0) {
-                        newTryingWords[currentState.wordsInLine][indexOfSpace] =
-                            LetterDataClass(letter = letter)
-                        if (indexOfSpace == 4) {
-                            madeFullWordInLine = true
-                        }
+                val indexOfSpace = newTryingWords[currentState.wordsInLine].indexOf(
+                    Letter()
+                )
+                if (indexOfSpace >= 0) {
+                    newTryingWords[currentState.wordsInLine][indexOfSpace] =
+                        Letter(letter = letter)
+                    if (indexOfSpace == 4) {
+                        madeFullWordInLine = true
                     }
                 }
+            }
 
-                if (isMultiplayer) FirebaseUtils.update(newTryingWords)
+            currentState.copy(
+                tryingWords = newTryingWords,
+                madeWordInLine =
+                if (madeFullWordInLine) madeFullWordInLine else currentState.madeWordInLine,
+                wordsInLine = currentState.wordsInLine,
+                isDone = currentState.isDone
+            )
+        }
 
-                currentState.copy(
-                    tryingWords = newTryingWords,
-                    madeWordInLine =
-                        if (madeFullWordInLine) madeFullWordInLine else currentState.madeWordInLine,
-                    wordsInLine = currentState.wordsInLine,
-                    isDone = currentState.isDone
-                )
+        if (isHost != null) {
+            repo.updateGrid(firebaseId, wordleWords.value.tryingWords, isHost).collect {
+                when (it) {
+                    is ResultState.Success -> {
+                        Log.d(TAG, it.data)
+                    }
+
+                    is ResultState.Failure -> {
+                        Log.e(TAG, "fail addLetter $firebaseId", it.msg)
+                    }
+
+                    ResultState.Loading -> {}
+                }
             }
         }
     }
 
-    fun deleteLetter(isMultiplayer: Boolean = false) {
-        viewModelScope.launch {
-            _wordleWords.update { currentState ->
-                val newTryingWords = currentState.tryingWords.map { it.copyOf() }.toTypedArray()
+    fun deleteLetter(isHost: Boolean? = null) = viewModelScope.launch {
+        _wordleWords.update { currentState ->
+            val newTryingWords = currentState.tryingWords.map { it.copyOf() }.toTypedArray()
 
-                val indexOfChar = newTryingWords[currentState.wordsInLine].indexOf(
-                    LetterDataClass()
-                ) - 1
-                if (indexOfChar >= 0) {
-                    newTryingWords[currentState.wordsInLine][indexOfChar] = LetterDataClass()
-                } else if (indexOfChar == -2) {
-                    newTryingWords[currentState.wordsInLine][4] = LetterDataClass()
+            val indexOfChar = newTryingWords[currentState.wordsInLine].indexOf(
+                Letter()
+            ) - 1
+            if (indexOfChar >= 0) {
+                newTryingWords[currentState.wordsInLine][indexOfChar] = Letter()
+            } else if (indexOfChar == -2) {
+                newTryingWords[currentState.wordsInLine][4] = Letter()
+            }
+
+            currentState.copy(
+                tryingWords = newTryingWords,
+                madeWordInLine = false,
+                wordsInLine = currentState.wordsInLine,
+                isDone = currentState.isDone
+            )
+        }
+
+        if (isHost != null) {
+            repo.updateGrid(firebaseId, wordleWords.value.tryingWords, isHost).collect {
+                when (it) {
+                    is ResultState.Success -> {
+                        Log.d(TAG, it.data)
+                    }
+
+                    is ResultState.Failure -> {
+                        Log.e(TAG, "fail deleteLetter $firebaseId", it.msg)
+                    }
+
+                    ResultState.Loading -> {}
                 }
-
-                if (isMultiplayer) FirebaseUtils.update(newTryingWords)
-
-                currentState.copy(
-                    tryingWords = newTryingWords,
-                    madeWordInLine = false,
-                    wordsInLine = currentState.wordsInLine,
-                    isDone = currentState.isDone
-                )
             }
         }
     }
 
-    fun checkAnswer(isMultiplayer: Boolean) {
-        viewModelScope.launch {
-            val amountOfWords = _wordleWords.value.tryingWords.size
-            if (_wordleWords.value.madeWordInLine && _wordleWords.value.wordsInLine < amountOfWords) {
-                var answerString = ""
-                for (letter in _wordleWords.value.tryingWords[_wordleWords.value.wordsInLine]) {
-                    answerString = answerString.plus(letter.letter)
-                }
+    fun checkAnswer(isHost: Boolean? = null) = viewModelScope.launch {
+        val amountOfWords = _wordleWords.value.tryingWords.size
+        if (_wordleWords.value.madeWordInLine && _wordleWords.value.wordsInLine < amountOfWords) {
+            var answerString = ""
+            for (letter in _wordleWords.value.tryingWords[_wordleWords.value.wordsInLine]) {
+                answerString = answerString.plus(letter.letter)
+            }
 
-                if (answerString in words) {
-                    _wordleWords.update { currentState ->
-                        val newTryingWords =
-                            currentState.tryingWords.map { it.copyOf() }.toTypedArray()
-                        val answer = currentState.tryingWords[currentState.wordsInLine]
+            if (answerString in words) {
+                _wordleWords.update { currentState ->
+                    val newTryingWords =
+                        currentState.tryingWords.map { it.copyOf() }.toTypedArray()
+                    val answer = currentState.tryingWords[currentState.wordsInLine]
 
-                        for (i in answer.indices) {
-                            val color = when (answer[i].letter) {
-                                currentWord!![i] -> {
-                                    ColorLetter.Right.color
-                                }
-                                in currentWord!! -> {
-                                    ColorLetter.Almost.color
-                                }
-                                else -> {
-                                    ColorLetter.Miss.color
-                                }
+                    for (i in answer.indices) {
+                        val color = when (answer[i].letter) {
+                            currentWord!![i] -> {
+                                ColorLetter.Right.color
                             }
-                            answer[i] = LetterDataClass(answer[i].letter, color)
-                            updateKeyboard(answer[i].letter, color)
+
+                            in currentWord!! -> {
+                                ColorLetter.Almost.color
+                            }
+
+                            else -> {
+                                ColorLetter.Miss.color
+                            }
                         }
+                        answer[i] = Letter(answer[i].letter, color)
+                        updateKeyboard(answer[i].letter, color)
+                    }
 
-                        val isDone =
-                            (answer.count { it.color == ColorLetter.Right.color } == 5) or
-                                    (currentState.wordsInLine.inc() == amountOfWords)
+                    val isDone =
+                        (answer.count { it.color == ColorLetter.Right.color } == 5) or
+                                (currentState.wordsInLine.inc() == amountOfWords)
 
-                        newTryingWords[currentState.wordsInLine] = answer
+                    newTryingWords[currentState.wordsInLine] = answer
 
-                        if (isMultiplayer) FirebaseUtils.update(newTryingWords)
+                    currentState.copy(
+                        tryingWords = newTryingWords,
+                        wordsInLine =
+                        if (isDone)
+                            currentState.wordsInLine
+                        else currentState.wordsInLine.inc(),
+                        madeWordInLine = false,
+                        isDone = isDone
+                    )
+                }
 
-                        currentState.copy(
-                            tryingWords = newTryingWords,
-                            wordsInLine =
-                                if (isDone)
-                                    currentState.wordsInLine
-                                else currentState.wordsInLine.inc(),
-                            madeWordInLine = false,
-                            isDone = isDone
-                        )
+                if (isHost != null) {
+                    repo.updateGrid(firebaseId, wordleWords.value.tryingWords, isHost).collect {
+                        when (it) {
+                            is ResultState.Success -> {
+                                Log.d(TAG, it.data)
+                            }
+
+                            is ResultState.Failure -> {
+                                Log.e(TAG, "fail checkAnswer $firebaseId", it.msg)
+                            }
+
+                            ResultState.Loading -> {}
+                        }
                     }
                 }
             }
         }
     }
 
+    fun isDoneSwitch() {
+        _wordleWords.update {
+            it.copy(
+                isDone = false
+            )
+        }
+    }
 
-    private fun updateKeyboard(letter: Char, color: Color) {
+
+    private fun updateKeyboard(letter: Char, color: Color) = viewModelScope.launch {
         _keyboardLetters.update { currentState ->
             val newKeyboardLetter = currentState.map { it.copyOf() }.toTypedArray()
             for (line in newKeyboardLetter.indices) {
-                var indexOfChar = newKeyboardLetter[line].indexOf(LetterDataClass(letter = letter))
+                var indexOfChar = newKeyboardLetter[line].indexOf(Letter(letter = letter))
 
                 //сhange from yellow to green
                 if (indexOfChar == -1) {
                     indexOfChar = newKeyboardLetter[line].indexOf(
-                        LetterDataClass(letter = letter, color = ColorLetter.Almost.color)
+                        Letter(letter = letter, color = ColorLetter.Almost.color)
                     )
                 }
 
                 if (indexOfChar >= 0) {
-                    newKeyboardLetter[line][indexOfChar] = LetterDataClass(letter, color)
+                    newKeyboardLetter[line][indexOfChar] = Letter(letter, color)
                     break
                 }
             }
@@ -197,34 +235,4 @@ class LettersViewModel : ViewModel() {
         }
     }
 
-    fun waitWord(wait: Boolean) {
-        if (wait) {
-            val ref = Firebase.firestore.collectionGroup(firebaseId!!)
-            listener = ref.addSnapshotListener { snapshot, e ->
-                if (e != null) {
-                    Log.e(TAG, "Listen failed Word", e)
-                    return@addSnapshotListener
-                }
-                if (snapshot == null) {
-                    Log.d(TAG, "No such document")
-                } else {
-                    val data = snapshot.documents.find {
-                        firebaseId!! in it.reference.path
-                    }
-                    val wordInBase = data?.getField<String>("currentWord") ?: ""
-                    Log.d(TAG, "Word in firebase: $wordInBase")
-                    Log.d(TAG, "Word in localEnemy: ${wordFromEnemy.value}")
-                    if (wordInBase.length == 5 && wordInBase != currentWord) {
-                        Log.d(TAG, "Rewrite to: $wordInBase")
-                        _wordFromEnemy.update {
-                            wordInBase
-                        }
-                        currentWord = wordInBase
-                    }
-                }
-            }
-        } else {
-            listener.remove()
-        }
-    }
 }

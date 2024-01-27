@@ -44,7 +44,7 @@ fun KeyboardGrid(
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 20.sp,
     lettersViewModel: LettersViewModel = viewModel(),
-    isMultiplayer: Boolean = false
+    isHost: Boolean? = null
 ) {
     val context = LocalContext.current
     val keyboardLetter by lettersViewModel.keyboardLetters.collectAsState()
@@ -63,7 +63,7 @@ fun KeyboardGrid(
                     fontSize = fontSize,
                     modifierToCard = Modifier
                         .padding(3.dp)
-                        .clickable { lettersViewModel.addLetter(letter.letter, isMultiplayer) }
+                        .clickable { lettersViewModel.addLetter(letter.letter, isHost) }
                         .width(27.dp),
                     modifierToText = Modifier
                         .padding(6.dp)
@@ -81,7 +81,7 @@ fun KeyboardGrid(
                     fontSize = fontSize,
                     modifierToCard = Modifier
                         .padding(3.dp)
-                        .clickable { lettersViewModel.addLetter(letter.letter, isMultiplayer) }
+                        .clickable { lettersViewModel.addLetter(letter.letter, isHost) }
                         .width(30.dp),
                     modifierToText = Modifier
                         .padding(6.dp)
@@ -102,7 +102,7 @@ fun KeyboardGrid(
                     contentDescription = "backspace", tint = Color.White,
                     modifier = Modifier
                         .padding(top = 6.dp, start = 16.dp, end = 16.dp, bottom = 6.dp)
-                        .clickable { lettersViewModel.deleteLetter(isMultiplayer) }
+                        .clickable { lettersViewModel.deleteLetter(isHost) }
                 )
             }
             for (letter in keyboardLetter[2]) {
@@ -112,7 +112,7 @@ fun KeyboardGrid(
                     fontSize = fontSize,
                     modifierToCard = Modifier
                         .padding(3.dp)
-                        .clickable { lettersViewModel.addLetter(letter.letter, isMultiplayer) }
+                        .clickable { lettersViewModel.addLetter(letter.letter, isHost) }
                         .width(26.dp),
                     modifierToText = Modifier
                         .padding(6.dp)
@@ -170,7 +170,7 @@ fun KeyboardGrid(
                                         .toCharArray()
                                 ) in words
                             ) {
-                                lettersViewModel.checkAnswer(isMultiplayer)
+                                lettersViewModel.checkAnswer(isHost)
                             } else {
                                 isError = !isError
                             }

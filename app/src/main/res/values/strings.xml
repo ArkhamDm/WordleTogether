@@ -21,4 +21,9 @@
     <string name="close">Close</string>
     <string name="createSession">Create</string>
     <string name="findSession">Find</string>
+    <string name="refresh">Refresh</string>
+    <string name="enter_session_name">Enter session name:</string>
+    <string name="waiting_enemy">Waiting enemy</string>
+    <string name="enemy_choosing_word">Enemy choosing word</string>
+    <string name="server_name">"Server: "</string>
 </resources>
