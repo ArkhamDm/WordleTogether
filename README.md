@@ -11,6 +11,16 @@ App UI is designed for Russian and English language, but words in game are only 
 - Google Gson for reading dataset of words  
 
 # Screenshots of Game
-![](https://github.com/ArkhamDm/WordleTogether/blob/master/pics/main_menu.jpg?raw=true)
-![](https://github.com/ArkhamDm/WordleTogether/blob/master/pics/singleplayer.jpg?raw=true)
-![](https://github.com/ArkhamDm/WordleTogether/blob/master/pics/singleplayer_win.jpg?raw=true)
+
+<p align="center">
+  <img src="https://github.com/ArkhamDm/WordleTogether/blob/master/pics/main_menu.jpg" width=200>
+  <img src="https://github.com/ArkhamDm/WordleTogether/blob/master/pics/singleplayer.jpg" width=200>
+  <img src="https://github.com/ArkhamDm/WordleTogether/blob/master/pics/singleplayer_win.jpg" width=200>
+</p>
+
+<p align="center">
+  <img src="https://github.com/ArkhamDm/WordleTogether/blob/master/pics/list_servers.jpg" width=200>
+  <img src="https://github.com/ArkhamDm/WordleTogether/blob/master/pics/multiplayer.jpg" width=200>
+</p>
+
+
