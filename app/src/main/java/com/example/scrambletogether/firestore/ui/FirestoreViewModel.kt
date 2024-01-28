@@ -161,6 +161,9 @@ class FirestoreViewModel(
     }
 
     fun disconnectFromSession() = viewModelScope.launch {
+
+        if (session.value.sessionId.isEmpty()) return@launch
+
         repo.disconnect(session.value.sessionId, session.value.isHost).collect {
             when(it) {
                 is ResultState.Success -> {

@@ -23,7 +23,8 @@ import com.example.scrambletogether.ui.viewModels.LettersViewModel
 
 class MainActivity : ComponentActivity() {
     private val userPreferences by lazy { UserRepository(this) }
-
+    lateinit var firestoreViewModel: FirestoreViewModel
+    lateinit var lettersViewModel: LettersViewModel
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -41,8 +42,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     val navController = rememberNavController()
 
-                    val lettersViewModel: LettersViewModel = viewModel()
-                    val firestoreViewModel: FirestoreViewModel = viewModel(
+                    lettersViewModel = viewModel()
+                    firestoreViewModel = viewModel(
                         factory = FirestoreViewModel.Companion.SettingsViewModelFactory(userPreferences)
                     )
 
@@ -75,6 +76,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-
+        firestoreViewModel.disconnectFromSession()
     }
 }

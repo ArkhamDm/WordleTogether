@@ -2,6 +2,11 @@
 
 package com.example.scrambletogether.ui
 
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -13,9 +18,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -23,6 +30,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.scrambletogether.data.ColorLetter
 import com.example.scrambletogether.data.Letter
 import com.example.scrambletogether.ui.theme.ScrambleTogetherTheme
 
@@ -57,13 +65,44 @@ fun Word(
         modifier = modifier
     ) {
         for (letter in word) {
+
+            //animation of revert and change color card
+            val transition =
+                updateTransition(targetState = letter.color, label = "RevertCardTransition")
+
+            val rotationState by transition.animateFloat(
+                transitionSpec = {
+                    keyframes {
+                        durationMillis = 1000
+                        0f at 0 with LinearOutSlowInEasing
+                    }
+                }, label = "RevertCardTransition"
+            ) {
+                if (it == ColorLetter.None.color) 0f else 180f
+            }
+
+            val colorState by transition.animateColor(
+                transitionSpec = {
+                    keyframes {
+                        durationMillis = 1000
+                        ColorLetter.None.color at 200 with LinearOutSlowInEasing
+                    }
+                }, label = "RevertCardTransition"
+            ) {
+                it
+            }
+            //
+
             Letter(
                 letter = letter.letter,
-                color = letter.color,
+                color = colorState,
                 fontSize = fontSize,
-                modifierToCard = Modifier
+                modifier = Modifier
                     .padding(padding)
                     .size(width = (letterSize.value * 1.25).dp, height = (letterSize.value * 1.35).dp)
+                    .graphicsLayer(rotationY = rotationState),
+                modifierToText = Modifier
+                    .graphicsLayer(rotationY = rotationState)
             )
         }
     }
@@ -74,11 +113,12 @@ fun Letter(
     letter: Char,
     color: Color,
     fontSize: TextUnit,
-    modifierToCard: Modifier = Modifier,
+    modifier: Modifier = Modifier,
     modifierToText: Modifier = Modifier
 ) {
+
     Card(
-        modifier = modifierToCard,
+        modifier = modifier,
         colors = CardDefaults.cardColors(color),
         shape = ShapeDefaults.ExtraSmall
     ) {

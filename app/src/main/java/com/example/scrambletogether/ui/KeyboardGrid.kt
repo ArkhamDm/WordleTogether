@@ -61,7 +61,7 @@ fun KeyboardGrid(
                     letter = letter.letter,
                     color = letter.color,
                     fontSize = fontSize,
-                    modifierToCard = Modifier
+                    modifier = Modifier
                         .padding(3.dp)
                         .clickable { lettersViewModel.addLetter(letter.letter, isHost) }
                         .width(27.dp),
@@ -79,7 +79,7 @@ fun KeyboardGrid(
                     letter = letter.letter,
                     color = letter.color,
                     fontSize = fontSize,
-                    modifierToCard = Modifier
+                    modifier = Modifier
                         .padding(3.dp)
                         .clickable { lettersViewModel.addLetter(letter.letter, isHost) }
                         .width(30.dp),
@@ -110,7 +110,7 @@ fun KeyboardGrid(
                     letter = letter.letter,
                     color = letter.color,
                     fontSize = fontSize,
-                    modifierToCard = Modifier
+                    modifier = Modifier
                         .padding(3.dp)
                         .clickable { lettersViewModel.addLetter(letter.letter, isHost) }
                         .width(26.dp),

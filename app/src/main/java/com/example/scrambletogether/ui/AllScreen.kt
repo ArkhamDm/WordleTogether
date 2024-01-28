@@ -116,7 +116,10 @@ fun SinglePlayer(
             viewModelState.tryingWords[viewModelState.wordsInLine].count { it.color == Color.Green } == 5,
             correctWord = lettersViewModel.currentWord!!,
             restartButton = { lettersViewModel.restartGame() },
-            exitButton = { navController.navigate(RouteName.MAIN_MENU.string) }
+            exitButton = {
+                lettersViewModel.restartGame()
+                navController.navigate(RouteName.MAIN_MENU.string)
+            }
         )
     }
 
