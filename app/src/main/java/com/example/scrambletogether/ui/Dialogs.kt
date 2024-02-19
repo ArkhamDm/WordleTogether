@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -51,9 +52,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.scrambletogether.R
 import com.example.scrambletogether.data.RouteName
 import com.example.scrambletogether.data.startWordleWords
@@ -61,14 +60,19 @@ import com.example.scrambletogether.data.words
 import com.example.scrambletogether.firestore.data.SessionItem
 import com.example.scrambletogether.firestore.ui.FirestoreViewModel
 import com.example.scrambletogether.ui.theme.ScrambleTogetherTheme
+import com.example.scrambletogether.ui.viewModels.LettersViewModel
+import com.example.scrambletogether.utils.PlayerState
 
 @Composable
 fun EndSingleGame(
     modifier: Modifier = Modifier,
-    isWin: Boolean,
+    playerState: PlayerState,
     correctWord: String,
     restartButton: () -> Unit = {},
-    exitButton: () -> Unit = {}
+    exitButton: () -> Unit = {},
+    winText: String = stringResource(id = R.string.single_win),
+    loseText: String = stringResource(id = R.string.single_lose),
+    drawText: String = stringResource(id = R.string.draw)
 ) {
     Dialog(onDismissRequest = {}) {
         Card(modifier = modifier) {
@@ -77,8 +81,11 @@ fun EndSingleGame(
             ) {
                 Text(
                     text =
-                    if (isWin) stringResource(id = R.string.single_win)
-                    else stringResource(id = R.string.single_lose),
+                    when (playerState) {
+                        PlayerState.WIN -> winText
+                        PlayerState.LOSE -> loseText
+                        else -> drawText
+                    },
                     fontSize = 36.sp,
                     modifier = Modifier
                         .padding(top = 6.dp, start = 40.dp, end = 40.dp, bottom = 64.dp)
@@ -94,6 +101,91 @@ fun EndSingleGame(
                     )
                     Text(
                         text = correctWord,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(horizontal = 32.dp)
+                ) {
+                    NoBorderButton(onClick = restartButton) {
+                        Text(
+                            text = stringResource(R.string.again_button)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    NoBorderButton(onClick = exitButton) {
+                        Text(
+                            text = stringResource(R.string.into_main_menu)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+//for one device
+@Composable
+fun EndSingleGame(
+    modifier: Modifier = Modifier,
+    playerState: PlayerState,
+    correctWord1: String,
+    correctWord2: String,
+    restartButton: () -> Unit,
+    exitButton: () -> Unit ,
+    winPlayer1Text: String,
+    winPlayer2Text: String,
+    drawText: String
+) {
+    Dialog(onDismissRequest = {}) {
+        Card(modifier = modifier) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text =
+                    when (playerState) {
+                        PlayerState.WIN -> winPlayer1Text
+                        PlayerState.LOSE -> winPlayer2Text
+                        else -> drawText
+                    },
+                    fontSize = 36.sp,
+                    modifier = Modifier
+                        .padding(top = 6.dp, start = 40.dp, end = 40.dp, bottom = 32.dp),
+                    textAlign = TextAlign.Center,
+                    lineHeight = 40.sp
+                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.player_1_word_was),
+                        fontSize = 24.sp
+                    )
+                    Text(
+                        text = correctWord1,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.player_2_word_was),
+                        fontSize = 24.sp
+                    )
+                    Text(
+                        text = correctWord2,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -175,7 +267,7 @@ fun ChangeGamemode(
 }
 
 @Composable
-fun SetWordDialog(
+fun SetWordTwoDevicesDialog(
     modifier: Modifier = Modifier,
     firestoreViewModel: FirestoreViewModel,
     onClick: () -> Unit
@@ -183,7 +275,7 @@ fun SetWordDialog(
     var isErrorWord by remember { mutableStateOf(true) }
     var wordToEnemy  by remember { mutableStateOf("") }
 
-    if (wordToEnemy.length == startWordleWords.tryingWords[0].size) {
+    if (wordToEnemy.length >= startWordleWords.tryingWords[0].size) {
         isErrorWord = wordToEnemy !in words
     }
 
@@ -229,50 +321,138 @@ fun SetWordDialog(
 }
 
 @Composable
+fun SetWordOneDeviceDialog(
+    modifier: Modifier = Modifier,
+    firstPlayerViewModel: LettersViewModel,
+    secondPlayerViewModel: LettersViewModel,
+    onClick: () -> Unit
+) {
+    var isErrorWord by remember { mutableStateOf(true) }
+    var wordToEnemy  by remember { mutableStateOf("") }
+
+    var setToPlayer2 by remember { mutableStateOf(true) }
+
+    if (wordToEnemy.length >= startWordleWords.tryingWords[0].size) {
+        isErrorWord = wordToEnemy !in words
+    }
+
+    Dialog(onDismissRequest = {}) {
+        Card(modifier = modifier) {
+            Column(
+                modifier = modifier,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text =  if (setToPlayer2) stringResource(R.string.word_for_player_2)
+                            else stringResource(R.string.word_for_player_1)
+                )
+                TextField(
+                    value = wordToEnemy,
+                    onValueChange = { wordToEnemy = it.uppercase() },
+                    modifier = Modifier.padding(16.dp),
+                    isError = isErrorWord
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                NoBorderButton(
+                    onClick =
+                    if (!isErrorWord) {
+                        {
+                            if (setToPlayer2) {
+                                secondPlayerViewModel.currentWord = wordToEnemy
+                            } else {
+                                firstPlayerViewModel.currentWord = wordToEnemy
+                                onClick()
+                            }
+                            setToPlayer2 = !setToPlayer2
+                            wordToEnemy = ""
+                        }
+                    } else {
+                        {}
+                    }
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.done),
+                        fontSize = 16.sp
+                    )
+                }
+            }
+        }
+    }
+}
+@Composable
 fun MultiplayerDialog(
     modifier: Modifier = Modifier,
     navController: NavController,
     firestoreViewModel: FirestoreViewModel,
     closeDialog: () -> Unit
 ) {
-    var findClicked by remember { mutableStateOf(false) }
-    var createClicked by remember { mutableStateOf(false) }
-    var connectClicked by remember { mutableStateOf(false) }
+    var oneDeviceClick by remember { mutableStateOf(false) }
+    var twoDevicesClick by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = closeDialog) {
         Card(modifier = modifier) {
-            if (findClicked) {
-                ListSessions(
+            if (oneDeviceClick) {
+                navController.navigate(RouteName.MULTI_PLAYER_ONE_DEVICE.string)
+            } else if (twoDevicesClick) {
+                MultiplayerTwoDevicesDialog(
+                    navController = navController,
                     firestoreViewModel = firestoreViewModel,
-                    connectClick = {
-                        connectClicked = !connectClicked
-                        findClicked = !findClicked
-                    },
-                    backClick = {
-                        findClicked = !findClicked
-                    }
                 )
-            } else if (createClicked ) {
-                SetSessionFieldButton(firestoreViewModel = firestoreViewModel) {
-                    navController.navigate(RouteName.MULTI_PLAYER.string)
-                    createClicked = !createClicked
-                }
-            } else if (connectClicked) {
-                navController.navigate(RouteName.MULTI_PLAYER.string)
             } else {
-                CreateOrFindButtons(
-                    createClick = {
-                        createClicked = !createClicked
-                    },
-                    findClick = {
-                        findClicked = !findClicked
-                    },
+                OneOrTwoDevicesButtons(
+                    oneDeviceClick = { oneDeviceClick = !oneDeviceClick },
+                    twoDevicesClick = { twoDevicesClick = !twoDevicesClick },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 64.dp, horizontal = 12.dp)
                 )
             }
         }
+    }
+}
+
+@Composable
+fun MultiplayerTwoDevicesDialog(
+    navController: NavController,
+    firestoreViewModel: FirestoreViewModel
+) {
+    var findClicked by remember { mutableStateOf(false) }
+    var createClicked by remember { mutableStateOf(false) }
+    var connectClicked by remember { mutableStateOf(false) }
+    if (findClicked) {
+        ListSessions(
+            firestoreViewModel = firestoreViewModel,
+            connectClick = {
+                connectClicked = !connectClicked
+                findClicked = !findClicked
+            },
+            backClick = {
+                findClicked = !findClicked
+            }
+        )
+    } else if (createClicked ) {
+        SetSessionFieldButton(firestoreViewModel = firestoreViewModel) {
+            navController.navigate(RouteName.MULTI_PLAYER_TWO_DEVICES.string)
+            createClicked = !createClicked
+        }
+    } else if (connectClicked) {
+        navController.navigate(RouteName.MULTI_PLAYER_TWO_DEVICES.string)
+    } else {
+        CreateOrFindButtons(
+            createClick = {
+                createClicked = !createClicked
+            },
+            findClick = {
+                findClicked = !findClicked
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 64.dp, horizontal = 12.dp)
+        )
     }
 }
 
@@ -307,6 +487,44 @@ fun CreateOrFindButtons(
                 fontSize = 26.sp,
                 modifier = Modifier
                     .padding(vertical = 20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun OneOrTwoDevicesButtons(
+    modifier: Modifier = Modifier,
+    oneDeviceClick: () -> Unit,
+    twoDevicesClick: () -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.SpaceAround,
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+    ) {
+        ElevatedButton(
+            onClick = oneDeviceClick,
+            shape = AbsoluteRoundedCornerShape(6.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.one_device),
+                contentDescription = "onePhone",
+                modifier = Modifier
+                    .height(75.dp)
+                    .width(85.dp)
+            )
+        }
+        NoBorderButton(
+            onClick = twoDevicesClick,
+            shape = AbsoluteRoundedCornerShape(6.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.two_devices),
+                contentDescription = "twoPhones",
+                modifier = Modifier
+                    .height(75.dp)
+                    .width(85.dp)
             )
         }
     }
@@ -421,6 +639,11 @@ fun Session(
             )
             Text(text = "/")
             Text(
+                text = session.drawTotal.toString(),
+                color = Color.White
+            )
+            Text(text = "/")
+            Text(
                 text = session.loseTotal.toString(),
                 color = Color.Red
             )
@@ -461,6 +684,7 @@ fun SetSessionFieldButton(
                         id = sessionId,
                         winTotal = firestoreViewModel.dataCounts.value.winCount,
                         loseTotal = firestoreViewModel.dataCounts.value.loseCount,
+                        drawTotal = firestoreViewModel.dataCounts.value.drawCount,
                         gamemode = "TwoSideMode"
                     )
                 )
@@ -536,10 +760,6 @@ fun WhatPreview3() {
 @Composable
 fun WhatPreview4() {
     ScrambleTogetherTheme {
-        MultiplayerDialog(
-            navController = rememberNavController(),
-            closeDialog = {},
-            firestoreViewModel = viewModel()
-        )
+        OneOrTwoDevicesButtons(oneDeviceClick = {}, twoDevicesClick = {})
     }
 }

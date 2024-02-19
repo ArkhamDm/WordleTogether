@@ -44,7 +44,8 @@ fun KeyboardGrid(
     modifier: Modifier = Modifier,
     fontSize: TextUnit = 20.sp,
     lettersViewModel: LettersViewModel = viewModel(),
-    isHost: Boolean? = null
+    isHost: Boolean? = null,
+    changePlayer: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val keyboardLetter by lettersViewModel.keyboardLetters.collectAsState()
@@ -171,6 +172,7 @@ fun KeyboardGrid(
                                 ) in words
                             ) {
                                 lettersViewModel.checkAnswer(isHost)
+                                changePlayer()
                             } else {
                                 isError = !isError
                             }

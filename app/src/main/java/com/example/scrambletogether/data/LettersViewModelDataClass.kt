@@ -4,7 +4,8 @@ data class LettersViewModelDataClass(
     val tryingWords: Array<Array<Letter>>,
     var madeWordInLine: Boolean = false,
     var wordsInLine: Int = 0,
-    var isDone: Boolean = false
+    var isWin: Boolean = false,
+    var isLose: Boolean = false
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -23,7 +24,8 @@ data class LettersViewModelDataClass(
         var result = tryingWords.contentDeepHashCode()
         result = 31 * result + madeWordInLine.hashCode()
         result = 31 * result + wordsInLine
-        result = 31 * result + isDone.hashCode()
+        result = 31 * result + isLose.hashCode()
+        result = 31 * result + isWin.hashCode()
         return result
     }
 }

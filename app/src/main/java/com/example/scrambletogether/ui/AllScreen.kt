@@ -25,10 +25,12 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +62,8 @@ import com.example.scrambletogether.firestore.ui.FirestoreViewModel
 import com.example.scrambletogether.ui.theme.ScrambleTogetherTheme
 import com.example.scrambletogether.ui.theme.md_theme_dark_onTertiary
 import com.example.scrambletogether.ui.viewModels.LettersViewModel
+import com.example.scrambletogether.utils.PlayerState
+import kotlinx.coroutines.delay
 import kotlin.system.exitProcess
 
 @Composable
@@ -110,10 +114,9 @@ fun SinglePlayer(
         KeyboardGrid(lettersViewModel = lettersViewModel)
     }
 
-    if (viewModelState.isDone) {
+    if (viewModelState.isLose or viewModelState.isWin) {
         EndSingleGame(
-            isWin =
-            viewModelState.tryingWords[viewModelState.wordsInLine].count { it.color == Color.Green } == 5,
+            playerState = if (viewModelState.isWin) PlayerState.WIN else PlayerState.LOSE,
             correctWord = lettersViewModel.currentWord!!,
             restartButton = { lettersViewModel.restartGame() },
             exitButton = {
@@ -142,7 +145,113 @@ fun SinglePlayer(
 }
 
 @Composable
-fun MultiPlayer(
+fun MultiPlayerOneDevice(
+    modifier: Modifier = Modifier,
+    navController: NavController,
+    firstPlayerViewModel: LettersViewModel,
+    secondPlayerViewModel: LettersViewModel
+) {
+    var backPressed by remember { mutableStateOf(false) }
+    var setWordDialog by rememberSaveable { mutableStateOf(true) }
+    var playerState: PlayerState? by remember { mutableStateOf(null) }
+    var isPlayer1Play by rememberSaveable { mutableStateOf(true) }
+    var isStartClock by rememberSaveable { mutableStateOf(false) }
+    var restartClock by remember { mutableStateOf(false) }
+
+    if (setWordDialog) {
+        SetWordOneDeviceDialog(
+            firstPlayerViewModel = firstPlayerViewModel,
+            secondPlayerViewModel = secondPlayerViewModel
+        ) {
+            setWordDialog = false
+            isStartClock = true
+        }
+    }
+
+    Log.d(TAG, "recompose MultiPlayer")
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.SpaceAround,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        MultiScreenOneDevice(
+            firstPlayerViewModel = firstPlayerViewModel,
+            secondPlayerViewModel = secondPlayerViewModel,
+            endGame = {
+                playerState = it
+            },
+            changePlayer = {
+                isPlayer1Play =! isPlayer1Play
+            },
+            isPlayer1 = isPlayer1Play,
+            isStartClock = isStartClock
+        )
+        KeyboardGrid(
+            lettersViewModel = if (isPlayer1Play) firstPlayerViewModel else secondPlayerViewModel,
+            changePlayer = {
+                isPlayer1Play =! isPlayer1Play
+                isStartClock = false
+                restartClock = true
+            }
+        )
+    }
+
+    LaunchedEffect(restartClock) {
+        if (restartClock) {
+            delay(3000)
+            isStartClock = true
+            restartClock = false
+        }
+    }
+
+    if (playerState != null) {
+        firstPlayerViewModel.isDoneSwitch()
+        secondPlayerViewModel.isDoneSwitch()
+        isStartClock = false
+        EndSingleGame(
+            playerState = playerState!!,
+            correctWord1 = firstPlayerViewModel.currentWord!!,
+            correctWord2 = secondPlayerViewModel.currentWord!!,
+            restartButton = {
+                firstPlayerViewModel.restartGame()
+                secondPlayerViewModel.restartGame()
+                isPlayer1Play = true
+                playerState = null
+                setWordDialog = !setWordDialog
+            },
+            exitButton = {
+                navController.navigate(RouteName.MAIN_MENU.string)
+                firstPlayerViewModel.restartGame()
+                secondPlayerViewModel.restartGame()
+            },
+            winPlayer1Text = stringResource(id = R.string.player_1_wins),
+            winPlayer2Text = stringResource(id = R.string.player_2_wins),
+            drawText = stringResource(id = R.string.draw)
+        )
+    }
+
+    BackHandler {
+        backPressed = true
+    }
+
+    if (backPressed) {
+        ChangeGamemode(
+            navigate = {
+                navController.navigate(RouteName.MAIN_MENU.string)
+                backPressed = false
+                firstPlayerViewModel.restartGame()
+                secondPlayerViewModel.restartGame()
+            },
+            closeDialog = {
+                backPressed = false
+            }
+        )
+    }
+}
+
+@Composable
+fun MultiPlayerTwoDevices(
     modifier: Modifier = Modifier,
     navController: NavController,
     firestoreViewModel: FirestoreViewModel,
@@ -150,10 +259,10 @@ fun MultiPlayer(
 ) {
     var backPressed by remember { mutableStateOf(false) }
     var setWordDialog by remember { mutableStateOf(true) }
-    var isWin: Boolean? by remember { mutableStateOf(null) }
+    var playerState: PlayerState? by remember { mutableStateOf(null) }
 
     if (setWordDialog) {
-        SetWordDialog(firestoreViewModel = firestoreViewModel) {
+        SetWordTwoDevicesDialog(firestoreViewModel = firestoreViewModel) {
             setWordDialog = !setWordDialog
         }
         lettersViewModel.firebaseId = firestoreViewModel.infForViewmodel.sessionId
@@ -166,34 +275,38 @@ fun MultiPlayer(
         verticalArrangement = Arrangement.SpaceAround,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        MultiScreen(
-            firestoreViewModel = firestoreViewModel,
-            lettersViewModel = lettersViewModel,
+        MultiScreenTwoDevices(
+            secondPlayerViewModel = firestoreViewModel,
+            firstPlayerViewModel = lettersViewModel,
             endGame = {
-                isWin = it
+                playerState = it
             }
         )
         KeyboardGrid(lettersViewModel = lettersViewModel, isHost = firestoreViewModel.infForViewmodel.isHost)
     }
 
-    if (isWin != null) {
+    if (playerState != null) {
         Log.d(TAG, "here")
         lettersViewModel.isDoneSwitch()
         firestoreViewModel.isDoneSwitch()
         EndSingleGame(
-            isWin = isWin!!,
+            playerState = playerState!!,
             correctWord = lettersViewModel.currentWord!!,
             restartButton = {
                 lettersViewModel.restartGame(lettersViewModel.firebaseId)
                 firestoreViewModel.reset()
 
-                if (isWin!!) {
-                    firestoreViewModel.incWinCount()
-                } else {
-                    firestoreViewModel.incLoseCount()
+                when (playerState) {
+                    PlayerState.WIN -> {
+                        firestoreViewModel.incWinCount()
+                    }
+                    PlayerState.LOSE -> {
+                        firestoreViewModel.incLoseCount()
+                    }
+                    else -> firestoreViewModel.incDrawCount()
                 }
 
-                isWin = null
+                playerState = null
                 setWordDialog = !setWordDialog
             },
             exitButton = {
@@ -202,10 +315,14 @@ fun MultiPlayer(
                 firestoreViewModel.reset()
                 firestoreViewModel.disconnectFromSession()
 
-                if (isWin!!) {
-                    firestoreViewModel.incWinCount()
-                } else {
-                    firestoreViewModel.incLoseCount()
+                when (playerState) {
+                    PlayerState.WIN -> {
+                        firestoreViewModel.incWinCount()
+                    }
+                    PlayerState.LOSE -> {
+                        firestoreViewModel.incLoseCount()
+                    }
+                    else -> firestoreViewModel.incDrawCount()
                 }
             }
         )

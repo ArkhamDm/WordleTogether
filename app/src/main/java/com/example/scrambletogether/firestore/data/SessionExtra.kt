@@ -7,7 +7,8 @@ data class SessionExtra(
     var listenGrid: Array<Array<Letter>> = enemyGrid,
     var enemyWord: String = "",
     var selfWord: String = "",
-    var isDone: Boolean = false,
+    var isWin: Boolean = false,
+    var isLose: Boolean = false,
     var sessionId: String = "",
     var isWait: Boolean = true,
     var isHost: Boolean = false
@@ -32,7 +33,8 @@ data class SessionExtra(
         var result = listenGrid.contentDeepHashCode()
         result = 31 * result + enemyWord.hashCode()
         result = 31 * result + selfWord.hashCode()
-        result = 31 * result + isDone.hashCode()
+        result = 31 * result + isWin.hashCode()
+        result = 31 * result + isLose.hashCode()
         result = 31 * result + sessionId.hashCode()
         result = 31 * result + isWait.hashCode()
         result = 31 * result + isHost.hashCode()

@@ -16,7 +16,8 @@ import com.example.scrambletogether.data.UserRepository
 import com.example.scrambletogether.data.words
 import com.example.scrambletogether.firestore.ui.FirestoreViewModel
 import com.example.scrambletogether.ui.MainMenu
-import com.example.scrambletogether.ui.MultiPlayer
+import com.example.scrambletogether.ui.MultiPlayerOneDevice
+import com.example.scrambletogether.ui.MultiPlayerTwoDevices
 import com.example.scrambletogether.ui.SinglePlayer
 import com.example.scrambletogether.ui.theme.ScrambleTogetherTheme
 import com.example.scrambletogether.ui.viewModels.LettersViewModel
@@ -60,8 +61,15 @@ class MainActivity : ComponentActivity() {
                                 lettersViewModel = lettersViewModel
                             )
                         }
-                        composable(RouteName.MULTI_PLAYER.string) {
-                            MultiPlayer(
+                        composable(RouteName.MULTI_PLAYER_ONE_DEVICE.string) {
+                            MultiPlayerOneDevice(
+                                navController = navController,
+                                firstPlayerViewModel = lettersViewModel,
+                                secondPlayerViewModel = viewModel()
+                            )
+                        }
+                        composable(RouteName.MULTI_PLAYER_TWO_DEVICES.string) {
+                            MultiPlayerTwoDevices(
                                 navController = navController,
                                 lettersViewModel = lettersViewModel,
                                 firestoreViewModel = firestoreViewModel

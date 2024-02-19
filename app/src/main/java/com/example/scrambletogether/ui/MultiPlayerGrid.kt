@@ -2,6 +2,14 @@ package com.example.scrambletogether.ui
 
 import android.content.ContentValues.TAG
 import android.util.Log
+import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Text
@@ -17,12 +26,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,26 +46,78 @@ import com.example.scrambletogether.R
 import com.example.scrambletogether.data.Letter
 import com.example.scrambletogether.firestore.ui.FirestoreViewModel
 import com.example.scrambletogether.ui.viewModels.LettersViewModel
+import com.example.scrambletogether.utils.PlayerState
 import kotlinx.coroutines.delay
 
 @Composable
-fun MultiScreen(
+fun MultiScreenOneDevice(
     modifier: Modifier = Modifier,
-    firestoreViewModel: FirestoreViewModel,
-    lettersViewModel: LettersViewModel,
-    endGame: (Boolean) -> Unit,
+    firstPlayerViewModel: LettersViewModel,
+    secondPlayerViewModel: LettersViewModel,
+    endGame: (PlayerState) -> Unit,
+    isPlayer1: Boolean,
+    changePlayer: () -> Unit,
+    isStartClock: Boolean
 ) {
-    val viewModelStateYours by lettersViewModel.wordleWords.collectAsState()
-    val viewModelStateEnemy by firestoreViewModel.session.collectAsState()
+    val viewModelStateYours by firstPlayerViewModel.wordleWords.collectAsState()
+    val viewModelStateEnemy by secondPlayerViewModel.wordleWords.collectAsState()
     Log.d(TAG, "recompose MutliScreen")
-    lettersViewModel.currentWord = viewModelStateEnemy.selfWord
 
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Clock(
+            modifier = Modifier.size(50.dp),
+            start = isStartClock,
+            changePlayerOrLine = {
+                if (isPlayer1) firstPlayerViewModel.closeLine()
+                else secondPlayerViewModel.closeLine()
+
+                changePlayer()
+            }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        DoubleGrid(
+            yourWords = viewModelStateYours.tryingWords,
+            enemyWords = viewModelStateEnemy.tryingWords,
+            enemyCurrentWord = "?????",
+            selfCurrentWord = "?????",
+            isWait = false,
+            nameForPlayer1 = stringResource(R.string.player1),
+            nameForPlayer2 = stringResource(R.string.player2),
+            isPlayer1 = isPlayer1
+        )
+    }
+
+    if (viewModelStateYours.isWin or viewModelStateEnemy.isWin)
+    {
+        endGame(if (viewModelStateYours.isWin) PlayerState.WIN else PlayerState.LOSE)
+    } else if (viewModelStateYours.isLose and viewModelStateEnemy.isLose) {
+        endGame(PlayerState.DRAW)
+    }
+}
+
+
+
+
+@Composable
+fun MultiScreenTwoDevices(
+    modifier: Modifier = Modifier,
+    firstPlayerViewModel: LettersViewModel,
+    secondPlayerViewModel: FirestoreViewModel,
+    endGame: (PlayerState) -> Unit
+) {
+    val viewModelStateYours by firstPlayerViewModel.wordleWords.collectAsState()
+    val viewModelStateEnemy by secondPlayerViewModel.session.collectAsState()
+    Log.d(TAG, "recompose MutliScreen")
+    firstPlayerViewModel.currentWord = viewModelStateEnemy.selfWord
 
     Column(
         modifier = modifier
     ) {
         Text(
-            text = stringResource(R.string.server_name) + firestoreViewModel.infForViewmodel.sessionId,
+            text = stringResource(R.string.server_name) + secondPlayerViewModel.infForViewmodel.sessionId,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -60,16 +126,21 @@ fun MultiScreen(
             enemyWords = viewModelStateEnemy.listenGrid,
             enemyCurrentWord = viewModelStateEnemy.enemyWord,
             selfCurrentWord = viewModelStateEnemy.selfWord,
-            isWait = viewModelStateEnemy.isWait
+            isWait = viewModelStateEnemy.isWait,
+            nameForPlayer1 = stringResource(R.string.you),
+            nameForPlayer2 = stringResource(R.string.enemy)
         )
     }
 
-    if (viewModelStateYours.isDone or viewModelStateEnemy.isDone) {
-        endGame(viewModelStateYours.tryingWords[viewModelStateYours.wordsInLine]
-            .count { it.color == Color.Green } == 5)
+    if (viewModelStateYours.isWin or viewModelStateEnemy.isWin)
+    {
+        endGame(if (viewModelStateYours.isWin) PlayerState.WIN else PlayerState.LOSE)
+    } else if (viewModelStateYours.isLose and viewModelStateEnemy.isLose) {
+        endGame(PlayerState.DRAW)
     }
 
 }
+
 
 @Composable
 fun DoubleGrid(
@@ -78,7 +149,10 @@ fun DoubleGrid(
     selfCurrentWord: String,
     yourWords: Array<Array<Letter>>,
     enemyWords: Array<Array<Letter>>,
-    isWait: Boolean
+    isWait: Boolean,
+    nameForPlayer1: String,
+    nameForPlayer2: String,
+    isPlayer1: Boolean = true
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -88,9 +162,10 @@ fun DoubleGrid(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = stringResource(R.string.you),
+                text = nameForPlayer1,
                 fontSize = 24.sp,
-                modifier = Modifier.padding(bottom = 6.dp)
+                modifier = Modifier.padding(bottom = 6.dp),
+                color = if (isPlayer1) Color.Green else Color.White
             )
             if (selfCurrentWord == "") {
                 var dotsCount by remember { mutableIntStateOf(0) }
@@ -144,17 +219,86 @@ fun DoubleGrid(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = stringResource(R.string.enemy),
+                text = nameForPlayer2,
                 fontSize = 24.sp,
-                modifier = Modifier.padding(bottom = 6.dp)
+                modifier = Modifier.padding(bottom = 6.dp),
+                color = if (isPlayer1) Color.White else Color.Green
             )
             ListWords(
                 tryingWords = enemyWords, fontSize = 24.sp, padding = 1.dp
             )
-            Text(
-                text = "${stringResource(R.string.word)}: $enemyCurrentWord",
-                fontSize = 18.sp,
-                modifier = Modifier.padding(top = 12.dp)
+            if (enemyCurrentWord != "") {
+                Text(
+                    text = "${stringResource(R.string.word)}: $enemyCurrentWord",
+                    fontSize = 18.sp,
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun Clock(
+    modifier: Modifier,
+    changePlayerOrLine: () -> Unit,
+    start: Boolean
+) {
+    var rotationState by remember { mutableFloatStateOf(0f) }
+    var colorState by remember { mutableStateOf(Color.Green) }
+
+    
+    if (start) {
+        val rotationAnimation by rememberInfiniteTransition().animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(6000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            )
+        )
+        val colorAnimation by rememberInfiniteTransition().animateColor(
+            initialValue = Color.Green,
+            targetValue = Color.Red,
+            animationSpec = infiniteRepeatable(
+                animation = tween(6000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            )
+        )
+
+        LaunchedEffect(rotationAnimation) {
+            rotationState = rotationAnimation
+            colorState = colorAnimation
+
+            if (rotationAnimation >= 359f) {
+                changePlayerOrLine()
+            }
+        }
+    } else {
+        rotationState = 0f
+        colorState = Color.Green
+    }
+
+    Canvas(
+        modifier = modifier
+    ) {
+        val center = Offset(size.width / 2, size.height / 2)
+        val circleRadius = 20.dp.toPx()
+        val arrowLength = 15.dp.toPx()
+
+        drawCircle(
+            color = colorState,
+            radius = circleRadius,
+            style = Stroke(width = 4f)
+        )
+
+        // Отрисовываем стрелку с вращением
+        rotate(degrees = rotationState, pivot = center) {
+            drawLine(
+                color = colorState,
+                start = center,
+                end = Offset(center.x, center.y - arrowLength),
+                strokeWidth = 5f
             )
         }
     }
@@ -163,13 +307,5 @@ fun DoubleGrid(
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun PreviewAAA() {
-    val tryingWords = Array(6) {
-        Array(5) {
-            Letter()
-        }
-    }
-    DoubleGrid(
-        enemyCurrentWord = "????", selfCurrentWord = "", yourWords = tryingWords,
-        enemyWords = tryingWords, isWait = false
-    )
+
 }

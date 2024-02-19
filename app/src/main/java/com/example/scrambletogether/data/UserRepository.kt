@@ -26,10 +26,11 @@ class UserRepository(
     private companion object {
         val WIN_COUNT = intPreferencesKey("win_count")
         val LOSE_COUNT = intPreferencesKey("lose_count")
+        val DRAW_COUNT = intPreferencesKey("draw_count")
         const val TAG = "UserRepository"
     }
 
-    val winLoseCount: Flow<UserRepo> = dataStore.data
+    val winLoseDrawCount: Flow<UserRepo> = dataStore.data
         .catch {
             if (it is IOException) {
                 Log.e(TAG, "Error reading preference WIN", it)
@@ -39,7 +40,10 @@ class UserRepository(
             }
         }
         .map { pref ->
-            UserRepo(pref[WIN_COUNT] ?: 0, pref[LOSE_COUNT] ?: 0)
+            UserRepo(
+                pref[WIN_COUNT] ?: 0,
+                pref[LOSE_COUNT] ?: 0,
+                pref[DRAW_COUNT] ?: 0)
         }
 
     suspend fun incWinCount() {
@@ -52,9 +56,15 @@ class UserRepository(
             data[LOSE_COUNT] = data[LOSE_COUNT]?.inc() ?: 1
         }
     }
+    suspend fun incDrawCount() {
+        dataStore.edit { data ->
+            data[DRAW_COUNT] = data[DRAW_COUNT]?.inc() ?: 1
+        }
+    }
 }
 
 data class UserRepo(
     var winCount: Int = 0,
-    var loseCount: Int = 0
+    var loseCount: Int = 0,
+    var drawCount: Int = 0
 )

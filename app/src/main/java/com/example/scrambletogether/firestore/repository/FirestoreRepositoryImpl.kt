@@ -22,6 +22,7 @@ private const val IS_WAIT = "isWait"
 private const val GAMEMODE = "gamemode"
 private const val WIN_TOTAL = "winTotal"
 private const val LOSE_TOTAL = "loseTotal"
+private const val DRAW_TOTAL = "drawTotal"
 
 class FirestoreRepositoryImpl @Inject constructor(
     private val db: FirebaseFirestore = Firebase.firestore
@@ -52,6 +53,7 @@ class FirestoreRepositoryImpl @Inject constructor(
                     GAMEMODE to sessionItem.gamemode,
                     WIN_TOTAL to sessionItem.winTotal,
                     LOSE_TOTAL to sessionItem.loseTotal,
+                    DRAW_TOTAL to sessionItem.drawTotal,
                     IS_WAIT to true,
                 )
             )
@@ -78,6 +80,7 @@ class FirestoreRepositoryImpl @Inject constructor(
                         id = data.id,
                         winTotal = data.getField<Int>(WIN_TOTAL) ?: 0,
                         loseTotal = data.getField<Int>(LOSE_TOTAL) ?: 0,
+                        drawTotal = data.getField<Int>(DRAW_TOTAL) ?: 0,
                         gamemode = data.getString(GAMEMODE) ?: "???"
                     )
                 }

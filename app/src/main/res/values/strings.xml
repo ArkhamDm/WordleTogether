@@ -26,4 +26,13 @@
     <string name="waiting_enemy">Waiting enemy</string>
     <string name="enemy_choosing_word">Enemy choosing word</string>
     <string name="server_name">"Server: "</string>
+    <string name="word_for_player_2">Word for Player 2</string>
+    <string name="word_for_player_1">Word for Player 1</string>
+    <string name="player1">Player 1</string>
+    <string name="player2">Player 2</string>
+    <string name="player_1_wins">Player 1 wins!</string>
+    <string name="player_2_wins">Player 2 wins!</string>
+    <string name="draw">Draw!</string>
+    <string name="player_1_word_was">Player 1 word was:</string>
+    <string name="player_2_word_was">Player 2 word was:</string>
 </resources>

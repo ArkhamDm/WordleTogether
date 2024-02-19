@@ -46,7 +46,7 @@ class FirestoreViewModel(
 
     init {
         viewModelScope.launch {
-            userRepository.winLoseCount.collect {
+            userRepository.winLoseDrawCount.collect {
                 _dataCounts.value = UserRepo(it.winCount, it.loseCount)
             }
         }
@@ -57,6 +57,10 @@ class FirestoreViewModel(
     }
     fun incLoseCount() = viewModelScope.launch {
         userRepository.incLoseCount()
+    }
+
+    fun incDrawCount() = viewModelScope.launch {
+        userRepository.incDrawCount()
     }
 
     private val repo: FirestoreRepository = FirestoreRepositoryImpl()
@@ -203,16 +207,18 @@ class FirestoreViewModel(
 
                         val gridSize = enemyGrid.size
                         val wordSize = enemyGrid[0].size
-                        val isDone =
+                        val isWin =
                             (gridNew.count { line ->
                                 line.count { letter ->
-                                    letter.color == ColorLetter.Right.color } == wordSize } >= 1) or
-                                (gridNew[gridSize - 1].count {
-                                    (it.letter != ' ') && (it.color != ColorLetter.None.color)} == wordSize)
+                                    letter.color == ColorLetter.Right.color } == wordSize } >= 1)
+                        val isLose =
+                            (gridNew[gridSize - 1].count {
+                                (it.letter != ' ') && (it.color != ColorLetter.None.color)} == wordSize)
 
                         _session.update {
                             it.copy(
-                                isDone = isDone,
+                                isWin = isWin,
+                                isLose = isLose,
                                 selfWord = selfWord,
                                 enemyWord = enemyWord,
                                 listenGrid = gridNew,
@@ -231,7 +237,7 @@ class FirestoreViewModel(
     fun isDoneSwitch() {
         _session.update {
             it.copy(
-                isDone = false
+                isWin = false
             )
         }
     }

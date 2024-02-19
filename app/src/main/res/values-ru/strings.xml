@@ -26,4 +26,13 @@
     <string name="waiting_enemy">Ожидание противника</string>
     <string name="enemy_choosing_word">Противник выбирает слово</string>
     <string name="server_name">"Сервер: "</string>
+    <string name="word_for_player_2">Слово для Игрока 2</string>
+    <string name="word_for_player_1">Слово для Игрока 1</string>
+    <string name="player1">Игрок 1</string>
+    <string name="player2">Игрок 2</string>
+    <string name="player_1_wins">Игрок 1 побеждает!</string>
+    <string name="player_2_wins">Игрок 2 побеждает!</string>
+    <string name="draw">Ничья!</string>
+    <string name="player_1_word_was">Слово Игрока 1 было:</string>
+    <string name="player_2_word_was">Слово Игрока 2 было:</string>
 </resources>

@@ -76,7 +76,7 @@ class LettersViewModel : ViewModel() {
                 madeWordInLine =
                 if (madeFullWordInLine) madeFullWordInLine else currentState.madeWordInLine,
                 wordsInLine = currentState.wordsInLine,
-                isDone = currentState.isDone
+                isLose = currentState.isLose
             )
         }
 
@@ -114,7 +114,7 @@ class LettersViewModel : ViewModel() {
                 tryingWords = newTryingWords,
                 madeWordInLine = false,
                 wordsInLine = currentState.wordsInLine,
-                isDone = currentState.isDone
+                isLose = currentState.isLose
             )
         }
 
@@ -167,20 +167,20 @@ class LettersViewModel : ViewModel() {
                         updateKeyboard(answer[i].letter, color)
                     }
 
-                    val isDone =
-                        (answer.count { it.color == ColorLetter.Right.color } == 5) or
-                                (currentState.wordsInLine.inc() == amountOfWords)
+                    val isWin = (answer.count { it.color == ColorLetter.Right.color } == 5)
+                    val isLose = (currentState.wordsInLine.inc() == amountOfWords)
 
                     newTryingWords[currentState.wordsInLine] = answer
 
                     currentState.copy(
                         tryingWords = newTryingWords,
                         wordsInLine =
-                        if (isDone)
+                        if (isLose or isWin)
                             currentState.wordsInLine
                         else currentState.wordsInLine.inc(),
                         madeWordInLine = false,
-                        isDone = isDone
+                        isWin = isWin,
+                        isLose = isLose
                     )
                 }
 
@@ -203,10 +203,37 @@ class LettersViewModel : ViewModel() {
         }
     }
 
+    fun closeLine() = viewModelScope.launch {
+        val amountOfWords = _wordleWords.value.tryingWords.size
+        _wordleWords.update { currentState ->
+            val newTryingWords =
+                currentState.tryingWords.map { it.copyOf() }.toTypedArray()
+            newTryingWords[currentState.wordsInLine] = arrayOf(
+                Letter(' ', ColorLetter.Miss.color),
+                Letter(' ', ColorLetter.Miss.color),
+                Letter(' ', ColorLetter.Miss.color),
+                Letter(' ', ColorLetter.Miss.color),
+                Letter(' ', ColorLetter.Miss.color)
+            )
+            val isLose = (currentState.wordsInLine.inc() == amountOfWords)
+
+            currentState.copy(
+                tryingWords = newTryingWords,
+                wordsInLine =
+                if (isLose)
+                    currentState.wordsInLine
+                else currentState.wordsInLine.inc(),
+                madeWordInLine = false,
+                isWin = currentState.isWin,
+                isLose = isLose
+            )
+        }
+    }
+
     fun isDoneSwitch() {
         _wordleWords.update {
             it.copy(
-                isDone = false
+                isLose = false
             )
         }
     }
