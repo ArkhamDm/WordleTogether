@@ -11,19 +11,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.scrambletogether.data.RouteName
-import com.example.scrambletogether.data.UserRepository
-import com.example.scrambletogether.data.words
-import com.example.scrambletogether.firestore.ui.FirestoreViewModel
-import com.example.scrambletogether.ui.MainMenu
-import com.example.scrambletogether.ui.MultiPlayerOneDevice
-import com.example.scrambletogether.ui.MultiPlayerTwoDevices
-import com.example.scrambletogether.ui.SinglePlayer
-import com.example.scrambletogether.ui.theme.ScrambleTogetherTheme
-import com.example.scrambletogether.ui.viewModels.LettersViewModel
+import com.example.scrambletogether.data.model.RouteName
+import com.example.scrambletogether.data.model.StartValues.words
+import com.example.scrambletogether.data.repository.UserRepositoryImpl
+import com.example.scrambletogether.presentation.ui.MainMenu
+import com.example.scrambletogether.presentation.ui.multiplayer.MultiPlayerOneDevice
+import com.example.scrambletogether.presentation.ui.multiplayer.MultiPlayerTwoDevices
+import com.example.scrambletogether.presentation.ui.singleplayer.SinglePlayer
+import com.example.scrambletogether.presentation.ui.theme.ScrambleTogetherTheme
+import com.example.scrambletogether.presentation.viewModel.FirestoreEvent
+import com.example.scrambletogether.presentation.viewModel.FirestoreViewModel
+import com.example.scrambletogether.presentation.viewModel.LettersViewModel
 
 class MainActivity : ComponentActivity() {
-    private val userPreferences by lazy { UserRepository(this) }
+    private val userPreferences by lazy { UserRepositoryImpl(context = this) }
     lateinit var firestoreViewModel: FirestoreViewModel
     lateinit var lettersViewModel: LettersViewModel
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,7 +84,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        firestoreViewModel.send(FirestoreEvent.DisconnectFromSession)
         super.onDestroy()
-        firestoreViewModel.disconnectFromSession()
     }
 }
