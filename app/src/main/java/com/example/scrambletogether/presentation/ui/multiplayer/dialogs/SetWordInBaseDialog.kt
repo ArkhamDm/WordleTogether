@@ -80,7 +80,7 @@ fun SetWordTwoDevicesDialog(
 }
 
 @Composable
-fun SetWordOneDeviceDialog(
+fun SetWordOneDeviceCard(
     modifier: Modifier = Modifier,
     firstPlayerViewModel: LettersViewModel,
     secondPlayerViewModel: LettersViewModel,
@@ -95,49 +95,47 @@ fun SetWordOneDeviceDialog(
         isErrorWord = wordToEnemy !in StartValues.words
     }
 
-    Dialog(onDismissRequest = {}) {
-        Card(modifier = modifier) {
-            Column(
-                modifier = modifier,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(16.dp))
+    Card(modifier = modifier) {
+        Column(
+            modifier = modifier,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text =  if (setToPlayer2) stringResource(R.string.word_for_player_2)
-                    else stringResource(R.string.word_for_player_1)
-                )
-                TextField(
-                    value = wordToEnemy,
-                    onValueChange = { wordToEnemy = it.uppercase() },
-                    modifier = Modifier.padding(16.dp),
-                    isError = isErrorWord
-                )
+            Text(
+                text =  if (setToPlayer2) stringResource(R.string.word_for_player_2)
+                else stringResource(R.string.word_for_player_1)
+            )
+            TextField(
+                value = wordToEnemy,
+                onValueChange = { wordToEnemy = it.uppercase() },
+                modifier = Modifier.padding(16.dp),
+                isError = isErrorWord
+            )
 
-                Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-                NoBorderButton(
-                    onClick =
-                    if (!isErrorWord) {
-                        {
-                            if (setToPlayer2) {
-                                secondPlayerViewModel.currentWord = wordToEnemy
-                            } else {
-                                firstPlayerViewModel.currentWord = wordToEnemy
-                                onClick()
-                            }
-                            setToPlayer2 = !setToPlayer2
-                            wordToEnemy = ""
+            NoBorderButton(
+                onClick =
+                if (!isErrorWord) {
+                    {
+                        if (setToPlayer2) {
+                            secondPlayerViewModel.currentWord = wordToEnemy
+                        } else {
+                            firstPlayerViewModel.currentWord = wordToEnemy
+                            onClick()
                         }
-                    } else {
-                        {}
+                        setToPlayer2 = !setToPlayer2
+                        wordToEnemy = ""
                     }
-                ) {
-                    Text(
-                        text = stringResource(id = R.string.done),
-                        fontSize = 16.sp
-                    )
+                } else {
+                    {}
                 }
+            ) {
+                Text(
+                    text = stringResource(id = R.string.done),
+                    fontSize = 16.sp
+                )
             }
         }
     }

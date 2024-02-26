@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -15,14 +16,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.example.scrambletogether.R
 import com.example.scrambletogether.data.model.RouteName
 import com.example.scrambletogether.presentation.ui.common.KeyboardGrid
 import com.example.scrambletogether.presentation.ui.common.dialogs.ChangeScreenDialog
 import com.example.scrambletogether.presentation.ui.common.dialogs.EndGameDialog
-import com.example.scrambletogether.presentation.ui.multiplayer.dialogs.SetWordOneDeviceDialog
+import com.example.scrambletogether.presentation.ui.multiplayer.dialogs.SetWordOneDeviceCard
 import com.example.scrambletogether.presentation.ui.multiplayer.dialogs.SetWordTwoDevicesDialog
+import com.example.scrambletogether.presentation.ui.multiplayer.dialogs.extras.TimerTimeChanger
 import com.example.scrambletogether.presentation.utils.PlayerState
 import com.example.scrambletogether.presentation.viewModel.FirestoreEvent
 import com.example.scrambletogether.presentation.viewModel.FirestoreViewModel
@@ -43,14 +46,23 @@ fun MultiPlayerOneDevice(
     var isPlayer1Play by rememberSaveable { mutableStateOf(true) }
     var isStartClock by rememberSaveable { mutableStateOf(false) }
     var restartClock by remember { mutableStateOf(false) }
+    var timerTime by remember { mutableIntStateOf(1) }
 
     if (setWordDialog) {
-        SetWordOneDeviceDialog(
-            firstPlayerViewModel = firstPlayerViewModel,
-            secondPlayerViewModel = secondPlayerViewModel
-        ) {
-            setWordDialog = false
-            isStartClock = true
+        Dialog(onDismissRequest = {}) {
+            if (timerTime == 1) {
+                TimerTimeChanger(
+                    getTimerTime = { timerTime = it }
+                )
+            } else {
+                SetWordOneDeviceCard(
+                    firstPlayerViewModel = firstPlayerViewModel,
+                    secondPlayerViewModel = secondPlayerViewModel
+                ) {
+                    setWordDialog = false
+                    isStartClock = true
+                }
+            }
         }
     }
 
@@ -71,7 +83,8 @@ fun MultiPlayerOneDevice(
                 isPlayer1Play =! isPlayer1Play
             },
             isPlayer1 = isPlayer1Play,
-            isStartClock = isStartClock
+            isStartClock = isStartClock,
+            timerTime = timerTime
         )
         KeyboardGrid(
             lettersViewModel = if (isPlayer1Play) firstPlayerViewModel else secondPlayerViewModel,
@@ -86,8 +99,12 @@ fun MultiPlayerOneDevice(
     LaunchedEffect(restartClock) {
         if (restartClock) {
             delay(3000)
-            isStartClock = true
-            restartClock = false
+
+            if (restartClock) {
+                isStartClock = true
+                restartClock = false
+            }
+
         }
     }
 
@@ -95,6 +112,7 @@ fun MultiPlayerOneDevice(
         firstPlayerViewModel.send(LetterEvent.IsDoneSwitch)
         secondPlayerViewModel.send(LetterEvent.IsDoneSwitch)
         isStartClock = false
+        restartClock = false
         EndGameDialog(
             playerState = playerState!!,
             correctWord1 = firstPlayerViewModel.currentWord!!,
@@ -105,6 +123,7 @@ fun MultiPlayerOneDevice(
                 isPlayer1Play = true
                 playerState = null
                 setWordDialog = !setWordDialog
+                timerTime = 1
             },
             exitButton = {
                 navController.navigate(RouteName.MAIN_MENU.string)

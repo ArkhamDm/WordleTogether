@@ -60,7 +60,8 @@ fun MultiScreenOneDevice(
     endGame: (PlayerState) -> Unit,
     isPlayer1: Boolean,
     changePlayer: () -> Unit,
-    isStartClock: Boolean
+    isStartClock: Boolean,
+    timerTime: Int,
 ) {
     val viewModelStateYours by firstPlayerViewModel.wordleWords.collectAsState()
     val viewModelStateEnemy by secondPlayerViewModel.wordleWords.collectAsState()
@@ -73,6 +74,7 @@ fun MultiScreenOneDevice(
         Clock(
             modifier = Modifier.size(50.dp),
             start = isStartClock,
+            timerTime = timerTime,
             changePlayerOrLine = {
                 if (isPlayer1) firstPlayerViewModel.send(LetterEvent.CloseLine)
                 else secondPlayerViewModel.send(LetterEvent.CloseLine)
@@ -245,7 +247,8 @@ fun DoubleGrid(
 fun Clock(
     modifier: Modifier,
     changePlayerOrLine: () -> Unit,
-    start: Boolean
+    start: Boolean,
+    timerTime: Int
 ) {
     var rotationState by remember { mutableFloatStateOf(0f) }
     var colorState by remember { mutableStateOf(Color.Green) }
@@ -256,7 +259,7 @@ fun Clock(
             initialValue = 0f,
             targetValue = 360f,
             animationSpec = infiniteRepeatable(
-                animation = tween(60000, easing = LinearEasing),
+                animation = tween(timerTime*1000, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart
             )
         )
@@ -264,7 +267,7 @@ fun Clock(
             initialValue = Color.Green,
             targetValue = Color.Red,
             animationSpec = infiniteRepeatable(
-                animation = tween(60000, easing = LinearEasing),
+                animation = tween(timerTime*1000, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart
             )
         )
