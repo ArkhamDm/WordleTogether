@@ -6,7 +6,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -31,7 +30,6 @@ import com.example.scrambletogether.presentation.viewModel.FirestoreEvent
 import com.example.scrambletogether.presentation.viewModel.FirestoreViewModel
 import com.example.scrambletogether.presentation.viewModel.LetterEvent
 import com.example.scrambletogether.presentation.viewModel.LettersViewModel
-import kotlinx.coroutines.delay
 
 @Composable
 fun MultiPlayerOneDevice(
@@ -45,7 +43,6 @@ fun MultiPlayerOneDevice(
     var playerState: PlayerState? by remember { mutableStateOf(null) }
     var isPlayer1Play by rememberSaveable { mutableStateOf(true) }
     var isStartClock by rememberSaveable { mutableStateOf(false) }
-    var restartClock by remember { mutableStateOf(false) }
     var timerTime by remember { mutableIntStateOf(1) }
 
     if (setWordDialog) {
@@ -90,29 +87,14 @@ fun MultiPlayerOneDevice(
             lettersViewModel = if (isPlayer1Play) firstPlayerViewModel else secondPlayerViewModel,
             changePlayer = {
                 isPlayer1Play =! isPlayer1Play
-                isStartClock = false
-                restartClock = true
             }
         )
-    }
-
-    LaunchedEffect(restartClock) {
-        if (restartClock) {
-            delay(3000)
-
-            if (restartClock) {
-                isStartClock = true
-                restartClock = false
-            }
-
-        }
     }
 
     if (playerState != null) {
         firstPlayerViewModel.send(LetterEvent.IsDoneSwitch)
         secondPlayerViewModel.send(LetterEvent.IsDoneSwitch)
         isStartClock = false
-        restartClock = false
         EndGameDialog(
             playerState = playerState!!,
             correctWord1 = firstPlayerViewModel.currentWord!!,

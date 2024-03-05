@@ -127,6 +127,7 @@ fun SetWordOneDeviceCard(
                         }
                         setToPlayer2 = !setToPlayer2
                         wordToEnemy = ""
+                        isErrorWord = true
                     }
                 } else {
                     {}

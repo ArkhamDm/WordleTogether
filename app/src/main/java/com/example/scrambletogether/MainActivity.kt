@@ -25,8 +25,8 @@ import com.example.scrambletogether.presentation.viewModel.LettersViewModel
 
 class MainActivity : ComponentActivity() {
     private val userPreferences by lazy { UserRepositoryImpl(context = this) }
-    lateinit var firestoreViewModel: FirestoreViewModel
-    lateinit var lettersViewModel: LettersViewModel
+    private lateinit var firestoreViewModel: FirestoreViewModel
+    private lateinit var lettersViewModel: LettersViewModel
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

@@ -2,12 +2,8 @@ package com.example.scrambletogether.presentation.ui.multiplayer
 
 import android.content.ContentValues.TAG
 import android.util.Log
-import androidx.compose.animation.animateColor
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +24,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,17 +34,16 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.scrambletogether.R
 import com.example.scrambletogether.domain.model.Letter
 import com.example.scrambletogether.presentation.ui.common.ListWords
 import com.example.scrambletogether.presentation.ui.multiplayer.dialogs.extras.LoadingIndicator
+import com.example.scrambletogether.presentation.utils.PlayerState
 import com.example.scrambletogether.presentation.viewModel.FirestoreViewModel
 import com.example.scrambletogether.presentation.viewModel.LetterEvent
 import com.example.scrambletogether.presentation.viewModel.LettersViewModel
-import com.example.scrambletogether.presentation.utils.PlayerState
 import kotlinx.coroutines.delay
 
 @Composable
@@ -80,7 +74,8 @@ fun MultiScreenOneDevice(
                 else secondPlayerViewModel.send(LetterEvent.CloseLine)
 
                 changePlayer()
-            }
+            },
+            isPlayer1 = isPlayer1
         )
         Spacer(modifier = Modifier.height(8.dp))
         DoubleGrid(
@@ -248,41 +243,38 @@ fun Clock(
     modifier: Modifier,
     changePlayerOrLine: () -> Unit,
     start: Boolean,
-    timerTime: Int
+    timerTime: Int,
+    isPlayer1: Boolean
 ) {
-    var rotationState by remember { mutableFloatStateOf(0f) }
-    var colorState by remember { mutableStateOf(Color.Green) }
+    var rotationState by remember { mutableFloatStateOf(1f) }
 
-    
+    val animate = remember { Animatable(rotationState) }
+
     if (start) {
-        val rotationAnimation by rememberInfiniteTransition().animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(timerTime*1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
+        LaunchedEffect(isPlayer1) {
+            rotationState = 360f
+            animate.animateTo(
+                rotationState,
+                animationSpec = tween(timerTime*1000, easing = LinearEasing)
             )
-        )
-        val colorAnimation by rememberInfiniteTransition().animateColor(
-            initialValue = Color.Green,
-            targetValue = Color.Red,
-            animationSpec = infiniteRepeatable(
-                animation = tween(timerTime*1000, easing = LinearEasing),
-                repeatMode = RepeatMode.Restart
-            )
-        )
-
-        LaunchedEffect(rotationAnimation) {
-            rotationState = rotationAnimation
-            colorState = colorAnimation
-
-            if (rotationAnimation >= 359f) {
+            if (!animate.isRunning) {
+                animate.snapTo(0f)
                 changePlayerOrLine()
             }
         }
     } else {
-        rotationState = 0f
-        colorState = Color.Green
+        LaunchedEffect(key1 = isPlayer1) {
+            animate.snapTo(0f)
+        }
+    }
+
+    val animatedRotation = remember(animate.value) { animate.value }
+    val animatedColor = remember(animate.value) {
+        Color(
+            red = (animate.value/360f),
+            green = 1f - (animate.value/360f),
+            blue = 0f
+        )
     }
 
     Canvas(
@@ -293,25 +285,19 @@ fun Clock(
         val arrowLength = 15.dp.toPx()
 
         drawCircle(
-            color = colorState,
+            color = animatedColor,
             radius = circleRadius,
             style = Stroke(width = 4f)
         )
 
         // Отрисовываем стрелку с вращением
-        rotate(degrees = rotationState, pivot = center) {
+        rotate(degrees = animatedRotation, pivot = center) {
             drawLine(
-                color = colorState,
+                color = animatedColor,
                 start = center,
                 end = Offset(center.x, center.y - arrowLength),
                 strokeWidth = 5f
             )
         }
     }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun PreviewAAA() {
-
 }
