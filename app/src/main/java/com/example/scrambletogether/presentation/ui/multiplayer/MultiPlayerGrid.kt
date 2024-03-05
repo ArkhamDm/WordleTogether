@@ -69,7 +69,7 @@ fun MultiScreenOneDevice(
             modifier = Modifier.size(50.dp),
             start = isStartClock,
             timerTime = timerTime,
-            changePlayerOrLine = {
+            changePlayerAndLine = {
                 if (isPlayer1) firstPlayerViewModel.send(LetterEvent.CloseLine)
                 else secondPlayerViewModel.send(LetterEvent.CloseLine)
 
@@ -241,30 +241,26 @@ fun DoubleGrid(
 @Composable
 fun Clock(
     modifier: Modifier,
-    changePlayerOrLine: () -> Unit,
+    changePlayerAndLine: () -> Unit,
     start: Boolean,
     timerTime: Int,
     isPlayer1: Boolean
 ) {
-    var rotationState by remember { mutableFloatStateOf(1f) }
+    val rotationState by remember { mutableFloatStateOf(1f) }
 
     val animate = remember { Animatable(rotationState) }
 
     if (start) {
         LaunchedEffect(isPlayer1) {
-            rotationState = 360f
+            animate.snapTo(0f)
             animate.animateTo(
-                rotationState,
+                360f,
                 animationSpec = tween(timerTime*1000, easing = LinearEasing)
             )
             if (!animate.isRunning) {
                 animate.snapTo(0f)
-                changePlayerOrLine()
+                changePlayerAndLine()
             }
-        }
-    } else {
-        LaunchedEffect(key1 = isPlayer1) {
-            animate.snapTo(0f)
         }
     }
 
